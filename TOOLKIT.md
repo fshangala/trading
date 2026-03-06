@@ -41,6 +41,7 @@ All scripts automatically load these settings using `config.py`.
 | `show_orders.py` | Lists recent order history. | `python show_orders.py [symbol]` |
 | `check_order.py` | Detailed status of one order. | `python check_order.py <order_id> [symbol]` |
 | `get_balance.py` | Fetches available futures balance. | `python get_balance.py [asset]` |
+| `get_crossover.py` | Finds the last EMA 25/99 crossover. | `python get_crossover.py <symbol> <interval>` |
 | `get_fees.py` | Calculates PnL and Fees. | `python get_fees.py <entry> <exit> <qty> [symbol]` |
 
 ## Typical Workflow

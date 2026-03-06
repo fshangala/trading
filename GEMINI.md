@@ -42,6 +42,7 @@ The workspace includes a background monitor (`monitor.py`) that uses `alerts.jso
 | Command | Usage Example |
 | :--- | :--- |
 | **Analyze** | `python indicators.py BTCUSDT 1h` |
+| **Crossover** | `python get_crossover.py BNBUSDT 1h` |
 | **Trade** | `python place_order.py BTCUSDT BUY MARKET 0.001 LONG` |
 | **Protect** | `python protection_order.py BTCUSDT SELL LONG TRAILING 0.5` |
 | **Positions** | `python show_positions.py` |
