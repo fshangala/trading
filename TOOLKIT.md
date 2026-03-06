@@ -20,6 +20,7 @@ A modular Python toolkit for interacting with the Binance USDS-M Futures Testnet
 | `show_positions.py` | Displays active positions. | `python show_positions.py [symbol]` |
 | `show_orders.py` | Lists recent order history. | `python show_orders.py [symbol]` |
 | `check_order.py` | Detailed status of one order. | `python check_order.py <order_id> [symbol]` |
+| `get_balance.py` | Fetches available futures balance. | `python get_balance.py [asset]` |
 | `get_fees.py` | Calculates PnL and Fees. | `python get_fees.py <entry> <exit> <qty> [symbol]` |
 
 ## Typical Workflow
@@ -39,7 +40,7 @@ The `alerts.json` file contains a list of alert objects. Each object can include
 - `id`: Unique identifier for the alert.
 - `symbol`: The trading pair (e.g., `BTCUSDT`).
 - `condition`: A Python-evaluable string (e.g., `price < 60000` or `pos_amt == 0`).
-- `action`: The action to take when the condition is met (`notify`, `open_long`, `open_short`, `adjust_sl`).
+- `action`: The action to take when the condition is met (`open_long`, `open_short`, `adjust_sl`, or omit for default notification).
 - `action_params`: (Optional) A dictionary of parameters for the action.
 - `disables`: (Optional) A list of alert IDs to deactivate when this alert is triggered.
 - `active`: A boolean to enable or disable the alert.
@@ -50,10 +51,10 @@ Run the monitor in a background terminal:
 .\env\Scripts\python.exe monitor.py
 ```
 **How it works:**
-1. **Pre-fetches Data:** Efficiently fetches indicators, positions, and candles (in that order) for all active symbols upfront to minimize API calls.
-2. **Evaluates Conditions:** It uses the cached market state to check if the `condition` in `alerts.json` is met.
+1. **Pre-fetches Data:** Efficiently fetches indicators, positions, and candles (in that order) for all active symbols upfront.
+2. **Evaluates Conditions:** Uses the cached market state to check if the `condition` in `alerts.json` is met.
 3. **Triggers Actions:** 
-   - `notify`: Triggers a Windows system beep and a message box.
-   - `open_long` / `open_short`: Automatically executes `place_order.py` and `protection_order.py`.
+   - **Automatic Notification:** Every triggered alert sends a notification. Action-specific alerts provide descriptive messages (e.g., "Opening LONG").
+   - `open_long` / `open_short`: Automatically executes trade and protection logic.
    - `adjust_sl`: Prompts the user to adjust their stop loss.
-4. **Auto-Deactivation:** Once an alert is triggered, its `active` status is set to `false` in `alerts.json` to prevent repeated execution.
+4. **Auto-Deactivation:** Once an alert is triggered, its `active` status is set to `false`. Any IDs listed in `disables` are also deactivated.

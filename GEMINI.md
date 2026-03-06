@@ -28,7 +28,7 @@ The workspace includes a background monitor (`monitor.py`) that uses `alerts.jso
 
 - **Configuring Alerts:** You can add or modify alerts in `alerts.json`.
     - `condition`: Use Python-style logic (e.g., `price < 70000`, `pos_amt == 0`).
-    - `action`: `notify`, `open_long`, `open_short`, or `adjust_sl`.
+    - `action`: `open_long`, `open_short`, or `adjust_sl`. If omitted, defaults to a simple notification.
     - `action_params`: Pass arguments like `qty`, `tp`, or `sl`.
     - `disables`: List of IDs to deactivate (e.g., `["other_alert_id"]`).
 - **Running the Monitor:** 
@@ -44,6 +44,7 @@ The workspace includes a background monitor (`monitor.py`) that uses `alerts.jso
 | **Trade** | `python place_order.py BTCUSDT BUY MARKET 0.001 LONG` |
 | **Protect** | `python protection_order.py BTCUSDT SELL LONG TRAILING 0.5` |
 | **Positions** | `python show_positions.py` |
+| **Balance** | `python get_balance.py` |
 | **Orders** | `python show_orders.py BTCUSDT` |
 
 ## Strategic Guidance

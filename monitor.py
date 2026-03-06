@@ -43,22 +43,17 @@ def execute_action(alert):
     action = alert.get("action")
     params = alert.get("action_params", {})
     symbol = alert["symbol"]
+    alert_id = alert["id"]
 
-    if action == "notify":
-        notify(f"ALERT: {alert['id']}", f"Condition met for {symbol}")
-    
-    elif action == "adjust_sl":
-        # 1. Show existing protection orders to find the SL ID
-        # For simplicity, we'll try to find all STOP_MARKET orders and cancel them
-        # (This is a simplified implementation - in production, we'd be more surgical)
-        logging.info(f"Adjusting SL for {symbol} to {params['new_sl']}")
-        # We'd need to find the ID, but for now, let's assume we use the tool as-is
-        # Note: This is where we'd call cancel_protection.py if we had the ID
-        # For this version, we notify and let the user know manual action or further script logic is needed
-        notify("ACTION REQUIRED", f"Alert {alert['id']} met. Please adjust SL to {params['new_sl']} manually or expand this script.")
+    if action == "adjust_sl":
+        msg = f"Action required: Adjust SL for {symbol} to {params['new_sl']}"
+        logging.info(msg)
+        notify(f"ACTION: {alert_id}", msg)
 
     elif action == "open_long":
-        logging.info(f"Opening LONG for {symbol} with qty {params['qty']}")
+        msg = f"Opening LONG for {symbol} with qty {params['qty']}"
+        logging.info(msg)
+        notify(f"ACTION: {alert_id}", msg)
         run_script("place_order.py", [symbol, "BUY", "MARKET", params['qty'], "LONG"])
         # Set TP/SL if provided
         if "sl" in params:
@@ -67,13 +62,19 @@ def execute_action(alert):
             run_script("protection_order.py", [symbol, "SELL", "LONG", "TP", params['tp']])
 
     elif action == "open_short":
-        logging.info(f"Opening SHORT for {symbol} with qty {params['qty']}")
+        msg = f"Opening SHORT for {symbol} with qty {params['qty']}"
+        logging.info(msg)
+        notify(f"ACTION: {alert_id}", msg)
         run_script("place_order.py", [symbol, "SELL", "MARKET", params['qty'], "SHORT"])
         # Set TP/SL if provided
         if "sl" in params:
             run_script("protection_order.py", [symbol, "BUY", "SHORT", "STOP", params['sl']])
         if "tp" in params:
             run_script("protection_order.py", [symbol, "BUY", "SHORT", "TP", params['tp']])
+    
+    else:
+        # Default notification if no action logic is matched
+        notify(f"ALERT: {alert_id}", f"Condition met for {symbol}")
 
 def check_alerts():
     if not os.path.exists("alerts.json"):
@@ -141,6 +142,8 @@ def check_alerts():
         try:
             if eval(condition, {"__builtins__": None}, eval_context):
                 logging.info(f"Condition MET for {alert['id']}!")
+                
+                # Execute action (handles action-specific or default notifications)
                 execute_action(alert)
                 
                 # Deactivate the triggered alert
