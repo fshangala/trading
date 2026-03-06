@@ -39,7 +39,7 @@ The workspace includes a background monitor (`monitor.py`) that uses `alerts.jso
 | :--- | :--- |
 | **Analyze** | `python indicators.py BTCUSDT 1h` |
 | **Trade** | `python place_order.py BTCUSDT BUY MARKET 0.001 LONG` |
-| **Protect** | `python protection_order.py BTCUSDT SELL LONG STOP 71000` |
+| **Protect** | `python protection_order.py BTCUSDT SELL LONG TRAILING 0.5` |
 | **Positions** | `python show_positions.py` |
 | **Orders** | `python show_orders.py BTCUSDT` |
 

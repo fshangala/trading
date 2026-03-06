@@ -14,7 +14,7 @@ A modular Python toolkit for interacting with the Binance USDS-M Futures Testnet
 | `get_candles.py` | Fetches OHLCV data. | `python get_candles.py <symbol> <interval> <limit>` |
 | `indicators.py` | Calculates EMA 7, 25, 99 and VWAP. | `python indicators.py <symbol> <interval>` |
 | `place_order.py` | Executes Market/Limit orders. | `python place_order.py <symbol> <side> <type> <qty> <pos_side> [price]` |
-| `protection_order.py` | Sets TP and SL orders. | `python protection_order.py <symbol> <side> <pos_side> <type:STOP\|TP> <price>` |
+| `protection_order.py` | Sets TP, SL, and Trailing stops. | `python protection_order.py <symbol> <side> <pos_side> <type:STOP\|TP\|TRAILING> <price/callback> [working_type/activation] [qty]` |
 | `cancel_protection.py` | Cancels a specific algo order. | `python cancel_protection.py <symbol> <algo_id>` |
 | `show_protection_orders.py` | Displays open TP/SL orders. | `python show_protection_orders.py [symbol]` |
 | `show_positions.py` | Displays active positions. | `python show_positions.py [symbol]` |
