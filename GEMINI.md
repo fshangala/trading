@@ -4,8 +4,9 @@ You are an AI trading agent operating in a workspace designed for Binance USDS-M
 
 ## Core Rules & Mandates
 
-- **Environment:** Always use the virtual environment's Python interpreter: `.\env\Scripts\python.exe`.
-- **API Access:** Use the `.env` file for `BINANCE_API_KEY` and `BINANCE_API_SECRET`.
+- **Environment Selection:** The toolkit supports both **Testnet** and **Live** environments. Check the `TESTNET` variable in `.env` (true/false) to determine the target.
+- **API Access:** All scripts use `config.py` to load credentials. Ensure `.env` contains both Live and Testnet keys.
+- **Verification:** Before executing trades, run `python config.py` to confirm the active environment and base path.
 - **Hedge Mode:** The account is in Hedge Mode. Always specify `LONG` or `SHORT` for `pos_side` in orders.
 - **Safety:** Never risk more than a reasonable portion of the balance (default to 0.001–0.005 BTC per trade unless specified).
 - **Verification:** Always verify order execution with `check_order.py` and set protection orders (TP/SL) immediately after opening a position.

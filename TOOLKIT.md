@@ -7,6 +7,26 @@ A modular Python toolkit for interacting with the Binance USDS-M Futures Testnet
 - **Virtual Environment:** Must be activated (`.\env\Scripts\Activate.ps1`).
 - **Configuration:** `.env` file containing `BINANCE_API_KEY` and `BINANCE_API_SECRET`.
 
+## Configuration
+
+The toolkit supports both **Testnet** and **Live** environments via a centralized `config.py`.
+
+### Environment Setup (`.env`)
+Manage your keys and environment selection in the `.env` file:
+```ini
+# Set to 'true' for Testnet, 'false' for Live
+TESTNET=false
+
+# Live Credentials
+BINANCE_API_KEY=your_live_key
+BINANCE_API_SECRET=your_live_secret
+
+# Testnet Credentials
+BINANCE_TESTNET_API_KEY=your_testnet_key
+BINANCE_TESTNET_API_SECRET=your_testnet_secret
+```
+All scripts automatically load these settings using `config.py`.
+
 ## Script Reference
 
 | Script | Description | Primary Usage |

@@ -96,7 +96,13 @@ def calculate_vwap(candles):
     return total_pv / total_volume if total_volume != 0 else 0
 
 def get_indicators(symbol="BTCUSDT", interval="1h"):
-    config = ConfigurationRestAPI(api_key=os.getenv("BINANCE_API_KEY", ""), api_secret=os.getenv("BINANCE_API_SECRET", ""), base_path="https://demo-fapi.binance.com/")
+    from config import get_config
+    config_data = get_config()
+    config = ConfigurationRestAPI(
+        api_key=config_data['api_key'],
+        api_secret=config_data['api_secret'],
+        base_path=config_data['base_path']
+    )
     client = DerivativesTradingUsdsFutures(config_rest_api=config)
     try:
         limit = 200

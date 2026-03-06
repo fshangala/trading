@@ -1,9 +1,8 @@
 import sys
-import os
 import logging
-from dotenv import load_dotenv
+from config import get_config
 
-load_dotenv()
+config = get_config()
 logging.basicConfig(level=logging.INFO)
 
 from binance_sdk_derivatives_trading_usds_futures.derivatives_trading_usds_futures import DerivativesTradingUsdsFutures
@@ -11,9 +10,9 @@ from binance_common.configuration import ConfigurationRestAPI
 
 def show_protection_orders(symbol=None):
     configuration = ConfigurationRestAPI(
-        api_key=os.getenv("BINANCE_API_KEY", ""),
-        api_secret=os.getenv("BINANCE_API_SECRET", ""),
-        base_path="https://demo-fapi.binance.com/",
+        api_key=config['api_key'],
+        api_secret=config['api_secret'],
+        base_path=config['base_path'],
     )
 
     client = DerivativesTradingUsdsFutures(config_rest_api=configuration)

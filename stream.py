@@ -1,7 +1,7 @@
-from dotenv import load_dotenv
-import os, logging, asyncio
+import logging, asyncio
+from config import get_config
 
-load_dotenv()
+config = get_config()
 logging.basicConfig(level=logging.INFO)
 
 from binance_common.configuration import ConfigurationRestAPI, ConfigurationWebSocketStreams
@@ -18,9 +18,9 @@ config_ws = ConfigurationWebSocketStreams(
 )
 
 config_rest = ConfigurationRestAPI(
-    api_key=os.getenv("BINANCE_API_KEY", ""),
-    api_secret=os.getenv("BINANCE_API_SECRET", ""),
-    base_path="https://demo-fapi.binance.com/",
+    api_key=config['api_key'],
+    api_secret=config['api_secret'],
+    base_path=config['base_path'],
 )
 
 client = DerivativesTradingUsdsFutures(config_ws_streams=config_ws, config_rest_api=config_rest)

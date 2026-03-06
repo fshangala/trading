@@ -5,12 +5,12 @@ import logging
 import winsound
 import ctypes
 import subprocess
-from dotenv import load_dotenv
+from config import get_config
 from indicators import get_indicators
 from get_candles import get_candles
 from show_positions import show_positions
 
-load_dotenv()
+config = get_config()
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
