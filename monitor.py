@@ -107,8 +107,9 @@ def check_alerts():
     # Fetch Positions
     for sym in symbols:
         positions = show_positions(symbol=sym)
-        pos_amt = 0
-        if positions:
+        pos_amt = None # Initialize as None to distinguish from 'zero position'
+        if positions is not None:
+            pos_amt = 0 # If we got a response, assume 0 unless found otherwise
             for p in positions:
                 amt = float(p.get("positionAmt", 0)) if isinstance(p, dict) else float(p.position_amt)
                 if amt != 0:
@@ -133,8 +134,13 @@ def check_alerts():
         if not base_data: continue
 
         # Combine all data into evaluation context
+        pos_val = position_data.get(symbol)
+        if pos_val is None and "pos_amt" in condition:
+            logging.warning(f"Skipping alert {alert['id']} as pos_amt data is missing.")
+            continue
+
         eval_context = base_data.copy()
-        eval_context["pos_amt"] = position_data.get(symbol, 0)
+        eval_context["pos_amt"] = pos_val
         eval_context["price"] = candle_data.get(symbol, base_data.get("price"))
         
         logging.info(f"Checking {alert['id']} ({condition})")
