@@ -28,9 +28,12 @@ The workspace includes a background monitor (`monitor.py`) that uses `alerts.jso
 
 - **Configuring Alerts:** You can add or modify alerts in `alerts.json`.
     - `condition`: Use Python-style logic (e.g., `price < 70000`, `pos_amt == 0`).
-    - `action`: `notify`, `open_long`, or `adjust_sl`.
+    - `action`: `notify`, `open_long`, `open_short`, or `adjust_sl`.
     - `action_params`: Pass arguments like `qty`, `tp`, or `sl`.
-- **Running the Monitor:** Start the monitor with `.\env\Scripts\python.exe monitor.py`.
+    - `disables`: List of IDs to deactivate (e.g., `["other_alert_id"]`).
+- **Running the Monitor:** 
+  - Start loop: `.\env\Scripts\python.exe monitor.py`
+  - Test once: `.\env\Scripts\python.exe monitor.py --once`
 - **Management:** Triggered alerts are automatically set to `active: false`. Re-enable them if needed.
 
 ## Tool Reference

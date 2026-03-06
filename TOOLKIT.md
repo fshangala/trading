@@ -39,8 +39,9 @@ The `alerts.json` file contains a list of alert objects. Each object can include
 - `id`: Unique identifier for the alert.
 - `symbol`: The trading pair (e.g., `BTCUSDT`).
 - `condition`: A Python-evaluable string (e.g., `price < 60000` or `pos_amt == 0`).
-- `action`: The action to take when the condition is met (`notify`, `open_long`, `adjust_sl`).
-- `action_params`: (Optional) A dictionary of parameters for the action (e.g., `{"qty": 0.001, "tp": 70000}`).
+- `action`: The action to take when the condition is met (`notify`, `open_long`, `open_short`, `adjust_sl`).
+- `action_params`: (Optional) A dictionary of parameters for the action.
+- `disables`: (Optional) A list of alert IDs to deactivate when this alert is triggered.
 - `active`: A boolean to enable or disable the alert.
 
 ### Execution (`monitor.py`)
@@ -49,10 +50,10 @@ Run the monitor in a background terminal:
 .\env\Scripts\python.exe monitor.py
 ```
 **How it works:**
-1. **Polls Data:** Every 60 seconds, it fetches the latest price, indicators, and position status for active alerts.
-2. **Evaluates Conditions:** It uses the current market state to check if the `condition` in `alerts.json` is met.
+1. **Pre-fetches Data:** Efficiently fetches indicators, positions, and candles (in that order) for all active symbols upfront to minimize API calls.
+2. **Evaluates Conditions:** It uses the cached market state to check if the `condition` in `alerts.json` is met.
 3. **Triggers Actions:** 
    - `notify`: Triggers a Windows system beep and a message box.
-   - `open_long`: Automatically executes `place_order.py` and `protection_order.py`.
+   - `open_long` / `open_short`: Automatically executes `place_order.py` and `protection_order.py`.
    - `adjust_sl`: Prompts the user to adjust their stop loss.
 4. **Auto-Deactivation:** Once an alert is triggered, its `active` status is set to `false` in `alerts.json` to prevent repeated execution.

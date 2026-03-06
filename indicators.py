@@ -5,7 +5,7 @@ import math
 from dotenv import load_dotenv
 
 load_dotenv()
-logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO) # Removed to allow importing scripts to configure logging
 
 from binance_sdk_derivatives_trading_usds_futures.derivatives_trading_usds_futures import DerivativesTradingUsdsFutures
 from binance_sdk_derivatives_trading_usds_futures.rest_api.models import (

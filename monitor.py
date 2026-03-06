@@ -7,6 +7,8 @@ import ctypes
 import subprocess
 from dotenv import load_dotenv
 from indicators import get_indicators
+from get_candles import get_candles
+from show_positions import show_positions
 
 load_dotenv()
 logging.basicConfig(
@@ -64,8 +66,14 @@ def execute_action(alert):
         if "tp" in params:
             run_script("protection_order.py", [symbol, "SELL", "LONG", "TP", params['tp']])
 
-from binance_sdk_derivatives_trading_usds_futures.derivatives_trading_usds_futures import DerivativesTradingUsdsFutures
-from binance_common.configuration import ConfigurationRestAPI
+    elif action == "open_short":
+        logging.info(f"Opening SHORT for {symbol} with qty {params['qty']}")
+        run_script("place_order.py", [symbol, "SELL", "MARKET", params['qty'], "SHORT"])
+        # Set TP/SL if provided
+        if "sl" in params:
+            run_script("protection_order.py", [symbol, "BUY", "SHORT", "STOP", params['sl']])
+        if "tp" in params:
+            run_script("protection_order.py", [symbol, "BUY", "SHORT", "TP", params['tp']])
 
 def check_alerts():
     if not os.path.exists("alerts.json"):
@@ -78,68 +86,100 @@ def check_alerts():
         logging.error(f"Error reading alerts.json: {e}")
         return
 
-    # Fetch current prices/indicators to avoid duplicate API calls
-    # For now, we call get_indicators per unique symbol/interval
-    
-    for alert in alerts:
-        if not alert.get("active", False):
-            continue
+    active_alerts = [a for a in alerts if a.get("active", False)]
+    if not active_alerts:
+        return
 
+    # 1. Identify all unique symbols and symbol/interval pairs needed
+    symbols = list(set(a["symbol"] for a in active_alerts))
+    symbol_intervals = list(set((a["symbol"], a.get("interval", "1h")) for a in active_alerts))
+    
+    # 2. Pre-fetch all required data
+    indicator_data = {} # (symbol, interval) -> data
+    position_data = {}  # symbol -> pos_amt
+    candle_data = {}    # symbol -> latest price
+
+    # Fetch Indicators
+    for sym, interval in symbol_intervals:
+        indicator_data[(sym, interval)] = get_indicators(sym, interval)
+
+    # Fetch Positions
+    for sym in symbols:
+        positions = show_positions(symbol=sym)
+        pos_amt = 0
+        if positions:
+            for p in positions:
+                amt = float(p.get("positionAmt", 0)) if isinstance(p, dict) else float(p.position_amt)
+                if amt != 0:
+                    pos_amt = amt
+                    break
+        position_data[sym] = pos_amt
+
+    # Fetch Candles (Last)
+    for sym in symbols:
+        candles = get_candles(symbol=sym, interval="1m", limit=1)
+        if candles:
+            candle_data[sym] = float(candles[-1][4])
+
+    # 3. Process Alerts using pre-fetched data
+    alerts_updated = False
+    for alert in active_alerts:
         symbol = alert["symbol"]
         interval = alert.get("interval", "1h")
         condition = alert["condition"]
         
+        base_data = indicator_data.get((symbol, interval))
+        if not base_data: continue
+
+        # Combine all data into evaluation context
+        eval_context = base_data.copy()
+        eval_context["pos_amt"] = position_data.get(symbol, 0)
+        eval_context["price"] = candle_data.get(symbol, base_data.get("price"))
+        
         logging.info(f"Checking {alert['id']} ({condition})")
         
-        data = get_indicators(symbol, interval)
-        if not data: continue
-        
-        # Get current price
-        from binance_sdk_derivatives_trading_usds_futures.derivatives_trading_usds_futures import DerivativesTradingUsdsFutures
-        from binance_common.configuration import ConfigurationRestAPI
-        
-        config = ConfigurationRestAPI(
-            api_key=os.getenv("BINANCE_API_KEY", ""),
-            api_secret=os.getenv("BINANCE_API_SECRET", ""),
-            base_path="https://demo-fapi.binance.com/",
-        )
-        client = DerivativesTradingUsdsFutures(config_rest_api=config)
-        
         try:
-            price_res = client.rest_api.kline_candlestick_data(symbol=symbol, interval="1m", limit=1)
-            data["price"] = float(price_res.data()[-1][4])
-            
-            # Fetch position amount for the symbol
-            pos_res = client.rest_api.position_information_v2(symbol=symbol)
-            pos_amt = 0
-            for p in pos_res.data():
-                amt = float(p.get("positionAmt", 0))
-                if amt != 0:
-                    pos_amt = amt
-                    break
-            data["pos_amt"] = pos_amt
-            
-            if eval(condition, {"__builtins__": None}, data):
+            if eval(condition, {"__builtins__": None}, eval_context):
                 logging.info(f"Condition MET for {alert['id']}!")
                 execute_action(alert)
-                # Deactivate alert to prevent spamming
+                
+                # Deactivate the triggered alert
                 alert["active"] = False
-                with open("alerts.json", "w") as f:
-                    json.dump(alerts, f, indent=4)
-                    
+                
+                # Deactivate other specified alerts
+                disables = alert.get("disables", [])
+                if disables:
+                    for other_id in disables:
+                        for a in alerts:
+                            if a["id"] == other_id and a["active"]:
+                                logging.info(f"Disabling alert {other_id} as requested by {alert['id']}")
+                                a["active"] = False
+                
+                alerts_updated = True
         except Exception as e:
             logging.error(f"Error evaluating alert {alert['id']}: {e}")
 
+    if alerts_updated:
+        with open("alerts.json", "w") as f:
+            json.dump(alerts, f, indent=4)
+
 def main():
-    logging.info("Background Monitor Active.")
+    import sys
+    run_once = "--once" in sys.argv
+    logging.info(f"Monitor Active (Once: {run_once})")
+    
     while True:
         try:
             check_alerts()
+            if run_once:
+                break
             time.sleep(60)
         except KeyboardInterrupt:
             break
         except Exception as e:
             logging.error(f"Loop error: {e}")
+            if run_once:
+                break
             time.sleep(10)
 
 if __name__ == "__main__":
