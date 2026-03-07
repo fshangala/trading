@@ -82,7 +82,8 @@ Run the monitor in a background terminal:
 .\env\Scripts\python.exe monitor.py
 ```
 **How it works:**
-1. **Pre-fetches Data:** Efficiently fetches indicators, positions, and candles (in that order) for all active symbols upfront.
+1. **Reloads Alerts:** The monitor reloads `alerts.json` at the start of every loop iteration (default 1 minute), allowing you to add or modify alerts without restarting the script.
+2. **Pre-fetches Data:** Efficiently fetches indicators, positions, and candles (in that order) for all active symbols upfront.
 2. **Evaluates Conditions:** Uses the cached market state to check if the `condition` in `alerts.json` is met.
 3. **Triggers Actions:** 
    - **Automatic Notification:** Every triggered alert sends a notification. Action-specific alerts provide descriptive messages (e.g., "Opening LONG").

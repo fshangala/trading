@@ -32,6 +32,7 @@ The workspace includes a background monitor (`monitor.py`) that uses `alerts.jso
     - `action`: `open_long`, `open_short`, or `adjust_sl`. If omitted, defaults to a simple notification.
     - `action_params`: Pass arguments like `qty`, `tp`, or `sl`.
     - `disables`: List of IDs to deactivate (e.g., `["other_alert_id"]`).
+    - **Note:** The monitor reloads `alerts.json` every loop iteration (default 1 minute), so you do **not** need to restart the script after updating your alerts.
 - **Running the Monitor:** 
   - Start loop: `.\env\Scripts\python.exe monitor.py`
   - Test once: `.\env\Scripts\python.exe monitor.py --once`
