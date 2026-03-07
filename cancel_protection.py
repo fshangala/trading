@@ -1,24 +1,14 @@
 import sys
 import logging
-from config import get_config
+from config import get_client
 
-config = get_config()
-logging.basicConfig(level=logging.INFO)
-
-from binance_sdk_derivatives_trading_usds_futures.derivatives_trading_usds_futures import DerivativesTradingUsdsFutures
-from binance_common.configuration import ConfigurationRestAPI
+# logging.basicConfig(level=logging.INFO)
 
 def cancel_protection_order(symbol, algo_id=None, client_algo_id=None):
-    configuration = ConfigurationRestAPI(
-        api_key=config['api_key'],
-        api_secret=config['api_secret'],
-        base_path=config['base_path'],
-    )
-
-    client = DerivativesTradingUsdsFutures(config_rest_api=configuration)
+    client = get_client()
 
     try:
-        logging.info(f"Cancelling protection order {algo_id if algo_id else client_algo_id}...")
+        logging.info(f"Cancelling protection order {algo_id if algo_id else client_algo_id} for {symbol}...")
         response = client.rest_api.cancel_algo_order(
             algo_id=algo_id,
             client_algo_id=client_algo_id

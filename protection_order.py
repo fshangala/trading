@@ -1,21 +1,11 @@
 import sys
 import logging
-from config import get_config
+from config import get_client
 
-config = get_config()
-logging.basicConfig(level=logging.INFO)
-
-from binance_sdk_derivatives_trading_usds_futures.derivatives_trading_usds_futures import DerivativesTradingUsdsFutures
-from binance_common.configuration import ConfigurationRestAPI
+# logging.basicConfig(level=logging.INFO)
 
 def set_protection_order(symbol, side, position_side, order_type, trigger_price=None, working_type="CONTRACT_PRICE", callback_rate=None, activate_price=None, quantity=None):
-    configuration = ConfigurationRestAPI(
-        api_key=config['api_key'],
-        api_secret=config['api_secret'],
-        base_path=config['base_path'],
-    )
-
-    client = DerivativesTradingUsdsFutures(config_rest_api=configuration)
+    client = get_client()
 
     # Map simple types to Binance order types
     type_map = {

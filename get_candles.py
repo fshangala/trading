@@ -1,24 +1,15 @@
 import sys
 import logging
-from config import get_config
-
-config = get_config()
-# logging.basicConfig(level=logging.INFO) # Removed to allow importing scripts to configure logging
-
-from binance_sdk_derivatives_trading_usds_futures.derivatives_trading_usds_futures import DerivativesTradingUsdsFutures
+import datetime
+from config import get_client
 from binance_sdk_derivatives_trading_usds_futures.rest_api.models import (
     KlineCandlestickDataIntervalEnum
 )
-from binance_common.configuration import ConfigurationRestAPI
+
+# logging.basicConfig(level=logging.INFO) # Removed to allow importing scripts to configure logging
 
 def get_candles(symbol="BTCUSDT", interval="1h", limit=10):
-    configuration = ConfigurationRestAPI(
-        api_key=config['api_key'],
-        api_secret=config['api_secret'],
-        base_path=config['base_path'],
-    )
-
-    client = DerivativesTradingUsdsFutures(config_rest_api=configuration)
+    client = get_client()
 
     try:
         logging.info(f"Fetching {limit} candles for {symbol} ({interval})...")
@@ -52,7 +43,6 @@ def get_candles(symbol="BTCUSDT", interval="1h", limit=10):
         print(f"{'Time':<20} | {'High':<10} | {'Low':<10} | {'Close':<10} | {'Volume':<10}")
         print("-" * 75)
         
-        import datetime
         for c in candles:
             # [OpenTime, Open, High, Low, Close, Volume, CloseTime, ...]
             time_str = datetime.datetime.fromtimestamp(c[0]/1000).strftime('%Y-%m-%d %H:%M')

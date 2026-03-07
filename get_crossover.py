@@ -1,22 +1,14 @@
 import sys
 import logging
 import datetime
-from config import get_config
+from config import get_client
 from indicators import calculate_ema
-from binance_sdk_derivatives_trading_usds_futures.derivatives_trading_usds_futures import DerivativesTradingUsdsFutures
 from binance_sdk_derivatives_trading_usds_futures.rest_api.models import (
     KlineCandlestickDataIntervalEnum
 )
-from binance_common.configuration import ConfigurationRestAPI
 
 def find_crossover(symbol="BTCUSDT", interval="1h", limit=500):
-    config_data = get_config()
-    config = ConfigurationRestAPI(
-        api_key=config_data['api_key'],
-        api_secret=config_data['api_secret'],
-        base_path=config_data['base_path']
-    )
-    client = DerivativesTradingUsdsFutures(config_rest_api=config)
+    client = get_client()
 
     try:
         enum_map = {

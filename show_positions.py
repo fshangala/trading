@@ -1,21 +1,11 @@
 import sys
 import logging
-from config import get_config
+from config import get_client
 
-config = get_config()
 # logging.basicConfig(level=logging.INFO) # Removed to allow importing scripts to configure logging
 
-from binance_sdk_derivatives_trading_usds_futures.derivatives_trading_usds_futures import DerivativesTradingUsdsFutures
-from binance_common.configuration import ConfigurationRestAPI
-
 def show_positions(symbol=None):
-    configuration = ConfigurationRestAPI(
-        api_key=config['api_key'],
-        api_secret=config['api_secret'],
-        base_path=config['base_path'],
-    )
-
-    client = DerivativesTradingUsdsFutures(config_rest_api=configuration)
+    client = get_client()
 
     try:
         logging.info(f"Fetching active positions{' for ' + symbol if symbol else ''}...")

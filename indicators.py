@@ -1,17 +1,12 @@
 import sys
-import os
 import logging
 import math
-from dotenv import load_dotenv
-
-load_dotenv()
-# logging.basicConfig(level=logging.INFO) # Removed to allow importing scripts to configure logging
-
-from binance_sdk_derivatives_trading_usds_futures.derivatives_trading_usds_futures import DerivativesTradingUsdsFutures
+from config import get_client
 from binance_sdk_derivatives_trading_usds_futures.rest_api.models import (
     KlineCandlestickDataIntervalEnum
 )
-from binance_common.configuration import ConfigurationRestAPI
+
+# logging.basicConfig(level=logging.INFO) # Removed to allow importing scripts to configure logging
 
 def calculate_ema(prices, period):
     if len(prices) < period:
@@ -96,14 +91,7 @@ def calculate_vwap(candles):
     return total_pv / total_volume if total_volume != 0 else 0
 
 def get_indicators(symbol="BTCUSDT", interval="1h"):
-    from config import get_config
-    config_data = get_config()
-    config = ConfigurationRestAPI(
-        api_key=config_data['api_key'],
-        api_secret=config_data['api_secret'],
-        base_path=config_data['base_path']
-    )
-    client = DerivativesTradingUsdsFutures(config_rest_api=config)
+    client = get_client()
     try:
         limit = 200
         enum_map = {"1m": KlineCandlestickDataIntervalEnum.INTERVAL_1m, "3m": KlineCandlestickDataIntervalEnum.INTERVAL_3m, "5m": KlineCandlestickDataIntervalEnum.INTERVAL_5m, "15m": KlineCandlestickDataIntervalEnum.INTERVAL_15m, "30m": KlineCandlestickDataIntervalEnum.INTERVAL_30m, "1h": KlineCandlestickDataIntervalEnum.INTERVAL_1h, "4h": KlineCandlestickDataIntervalEnum.INTERVAL_4h, "1d": KlineCandlestickDataIntervalEnum.INTERVAL_1d}

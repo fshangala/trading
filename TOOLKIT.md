@@ -12,18 +12,28 @@ A modular Python toolkit for interacting with the Binance USDS-M Futures Testnet
 The toolkit supports both **Testnet** and **Live** environments via a centralized `config.py`.
 
 ### Environment Setup (`.env`)
-Manage your keys and environment selection in the `.env` file:
+Manage your keys, environment selection, and optional proxy settings in the `.env` file:
 ```ini
-# Set to 'true' for Testnet, 'false' for Live
+# Set to 'true' for Testnet, 'false' for Live (defaults to true)
 TESTNET=false
 
 # Live Credentials
 BINANCE_API_KEY=your_live_key
 BINANCE_API_SECRET=your_live_secret
+# Optional: Custom API Base URL for Live (e.g., for a proxy or local gateway)
+BINANCE_API_PROXY_URL=https://fapi.binance.com/
 
 # Testnet Credentials
 BINANCE_TESTNET_API_KEY=your_testnet_key
 BINANCE_TESTNET_API_SECRET=your_testnet_secret
+
+# Optional: Global Proxy Settings
+USE_PROXY=false
+BINANCE_API_PROXY_HOST=127.0.0.1
+BINANCE_API_PROXY_PORT=8080
+BINANCE_API_PROXY_PROTOCOL=http
+BINANCE_API_PROXY_USERNAME=optional_user
+BINANCE_API_PROXY_PASSWORD=optional_pass
 ```
 All scripts automatically load these settings using `config.py`.
 

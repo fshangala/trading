@@ -5,12 +5,10 @@ import logging
 import winsound
 import ctypes
 import subprocess
-from config import get_config
 from indicators import get_indicators
 from get_candles import get_candles
 from show_positions import show_positions
 
-config = get_config()
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -24,10 +22,28 @@ PYTHON_EXE = os.path.join("env", "Scripts", "python.exe")
 
 def notify(title, message):
     logging.info(f"NOTIFICATION: {title} - {message}")
-    # System Beep
-    winsound.Beep(1000, 500)
-    # Windows Pop-up (Message Box)
-    ctypes.windll.user32.MessageBoxW(0, message, title, 1)
+    
+    # Looping Alert (Windows Alarm01.wav)
+    alarm_path = r"C:\Windows\Media\Alarm01.wav"
+    try:
+        if os.path.exists(alarm_path):
+            # Play in background and loop
+            winsound.PlaySound(alarm_path, winsound.SND_FILENAME | winsound.SND_ASYNC | winsound.SND_LOOP)
+        else:
+            # Fallback to beep if alarm file is missing
+            winsound.Beep(1000, 1000)
+    except Exception as e:
+        logging.error(f"Failed to play alarm: {e}")
+        winsound.Beep(1000, 1000)
+
+    # Windows Pop-up (Message Box) - This blocks until dismissed
+    ctypes.windll.user32.MessageBoxW(0, message, title, 0)
+    
+    # Stop the sound after dismiss
+    try:
+        winsound.PlaySound(None, winsound.SND_PURGE)
+    except:
+        pass
 
 def run_script(script_name, args):
     cmd = [PYTHON_EXE, script_name] + [str(a) for a in args]
