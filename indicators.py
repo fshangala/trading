@@ -115,11 +115,11 @@ def get_indicators(symbol="BTCUSDT", interval="1h"):
         }
 
         print(f"\n--- INDICATORS: {symbol} ({interval}) ---")
-        print(f"Price: {res['price']:.2f} | RSI: {res['rsi']:.2f}" if res['rsi'] else f"Price: {res['price']:.2f}")
-        print(f"EMA 7/25/99: {res['ema7']:.2f} / {res['ema25']:.2f} / {res['ema99']:.2f}")
-        if res['macd'][0]: print(f"MACD: {res['macd'][0]:.2f} | Signal: {res['macd'][1]:.2f} | Hist: {res['macd'][2]:.2f}")
-        if res['bb'][0]: print(f"Bollinger: U {res['bb'][0]:.2f} | M {res['bb'][1]:.2f} | L {res['bb'][2]:.2f}")
-        if res['atr']: print(f"ATR: {res['atr']:.2f} | VWAP: {res['vwap']:.2f} | OBV: {res['obv']:.0f}")
+        print(f"Price: {res['price']:.6f} | RSI: {res['rsi']:.2f}" if res['rsi'] else f"Price: {res['price']:.6f}")
+        print(f"EMA 7/25/99: {res['ema7']:.6f} / {res['ema25']:.6f} / {res['ema99']:.6f}")
+        if res['macd'][0]: print(f"MACD: {res['macd'][0]:.6f} | Signal: {res['macd'][1]:.6f} | Hist: {res['macd'][2]:.6f}")
+        if res['bb'][0]: print(f"Bollinger: U {res['bb'][0]:.6f} | M {res['bb'][1]:.6f} | L {res['bb'][2]:.6f}")
+        if res['atr']: print(f"ATR: {res['atr']:.6f} | VWAP: {res['vwap']:.6f} | OBV: {res['obv']:.0f}")
         
         signals = []
         if res['ema7'] > res['ema25']: signals.append("BULLISH (EMA 7>25)")

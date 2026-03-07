@@ -13,15 +13,14 @@ You are an AI trading agent operating in a workspace designed for Binance USDS-M
 
 ## Trading Workflow
 
-Follow the **SMA Trend Following Strategy** defined in `STRATEGY.md`:
+Follow the **Trend Following Strategy** defined in `STRATEGY.md`:
 
 1.  **Research:** Use `indicators.py` (EMA 7, 25, 99) and `get_candles.py` (1h/15m) to determine trend and volatility.
-    - `EMA 7 > EMA 25` = BULLISH (Look for LONG)
-    - `EMA 7 < EMA 25` = BEARISH (Look for SHORT)
-2.  **Execution:** Use `place_order.py` for entry.
-3.  **Protection:** Use `protection_order.py` to set TP and SL levels based on recent candle highs/lows and a 1.5:1 Risk/Reward ratio.
-4.  **Monitoring:** Use `show_positions.py` and `show_protection_orders.py` to track active trades.
-5.  **Audit:** Use `get_fees.py` after a trade is closed to calculate net PnL and fees.
+2.  **Plan:** Use `calculate_qty.py` to determine position size based on desired margin percentage and leverage.
+3.  **Execution:** Use `place_order.py` for entry.
+4.  **Protection:** Use `protection_order.py` to set TP and SL levels based on ATR (2x for SL, 1.5:1 RR for TP).
+5.  **Monitoring:** Use `show_positions.py` and `show_protection_orders.py` to track active trades.
+6.  **Audit:** Use `get_fees.py` after a trade is closed to calculate net PnL and fees.
 
 ## Automated Monitoring System
 
@@ -44,6 +43,7 @@ The workspace includes a background monitor (`monitor.py`) that uses `alerts.jso
 | :--- | :--- |
 | **Analyze** | `python indicators.py BTCUSDT 1h` |
 | **Crossover** | `python get_crossover.py BNBUSDT 1h` |
+| **Calc Qty** | `python calculate_qty.py BTCUSDT 20 20 LONG` |
 | **Trade** | `python place_order.py BTCUSDT BUY MARKET 0.001 LONG` |
 | **Protect** | `python protection_order.py BTCUSDT SELL LONG TRAILING 0.5` |
 | **Positions** | `python show_positions.py` |

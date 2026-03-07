@@ -63,7 +63,7 @@ def find_crossover(symbol="BTCUSDT", interval="1h", limit=500):
             if prev_25 <= prev_99 and curr_25 > curr_99:
                 dt = datetime.datetime.fromtimestamp(relevant_timestamps[i]/1000)
                 print(f"GOLDEN CROSS found at: {dt.strftime('%Y-%m-%d %H:%M')}")
-                print(f"Details: EMA25 ({curr_25:.2f}) > EMA99 ({curr_99:.2f})")
+                print(f"Details: EMA25 ({curr_25:.6f}) > EMA99 ({curr_99:.6f})")
                 found = True
                 break
             
@@ -71,7 +71,7 @@ def find_crossover(symbol="BTCUSDT", interval="1h", limit=500):
             elif prev_25 >= prev_99 and curr_25 < curr_99:
                 dt = datetime.datetime.fromtimestamp(relevant_timestamps[i]/1000)
                 print(f"DEATH CROSS found at:  {dt.strftime('%Y-%m-%d %H:%M')}")
-                print(f"Details: EMA25 ({curr_25:.2f}) < EMA99 ({curr_99:.2f})")
+                print(f"Details: EMA25 ({curr_25:.6f}) < EMA99 ({curr_99:.6f})")
                 found = True
                 break
 
