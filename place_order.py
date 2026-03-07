@@ -33,6 +33,8 @@ def place_order(symbol, side, order_type, quantity, position_side, price=None):
         return None
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
     if len(sys.argv) < 6:
         print("Usage: python place_order.py <symbol> <side:BUY|SELL> <type:MARKET|LIMIT> <quantity> <pos_side:LONG|SHORT|BOTH> [price]")
         sys.exit(1)

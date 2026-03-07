@@ -42,6 +42,7 @@ def calculate_fees(entry_price, exit_price, quantity, symbol="BTCUSDT"):
         return estimated
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     if len(sys.argv) < 4:
         print("Usage: python get_fees.py <entry_price> <exit_price> <quantity> [symbol]")
         sys.exit(1)

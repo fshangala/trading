@@ -35,6 +35,7 @@ def get_futures_balance(asset="USDT"):
         return None
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     import sys
     asset = sys.argv[1] if len(sys.argv) > 1 else "USDT"
     res = get_futures_balance(asset)

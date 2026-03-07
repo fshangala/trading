@@ -53,6 +53,8 @@ def set_protection_order(symbol, side, position_side, order_type, trigger_price=
         return None
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
     if len(sys.argv) < 5:
         print("Usage: python protection_order.py <symbol> <side:BUY|SELL> <pos_side:LONG|SHORT|BOTH> <type:STOP|TP|TRAILING> [trigger_price/callback_rate] [working_type/activate_price] [quantity]")
         sys.exit(1)

@@ -34,8 +34,9 @@ Before every trade, analyze the 1h (Primary) and 15m (Entry) timeframes.
 4. **Tool:** `python place_order.py <symbol> SELL MARKET <qty> SHORT`.
 
 ### Risk Management (ATR-Based)
-- **Stop Loss (SL):** Place SL at `Entry + (2 * ATR)` for shorts, or `Entry - (2 * ATR)` for longs.
-- **Take Profit (TP):** Aim for a minimum **1.5:1** Risk/Reward ratio.
+- **Stop Loss (SL):** Place SL at `Entry + (2 * ATR)` for shorts, or `Entry - (2 * ATR)` for longs. Use the ATR from the entry timeframe (e.g., 15m).
+- **Take Profit (TP):** Aim for a minimum **1.5:1** Risk/Reward ratio relative to the SL distance.
+  - *Example:* If Entry is 100 and SL is 90 (10 points risk), TP should be at 115 (15 points reward).
 - **Trailing Stop:** Once the price reaches **0.5% profit**, convert the fixed SL into a **0.5% Trailing Stop**.
 - **Tool:** `python protection_order.py <symbol> <side> <pos_side> <type> <price/callback>`.
 

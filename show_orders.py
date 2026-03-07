@@ -35,5 +35,6 @@ def show_orders(symbol="BTCUSDT", limit=10):
         return None
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     symbol = sys.argv[1] if len(sys.argv) > 1 else "BTCUSDT"
     show_orders(symbol)

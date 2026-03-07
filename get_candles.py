@@ -56,6 +56,7 @@ def get_candles(symbol="BTCUSDT", interval="1h", limit=10):
         return None
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     symbol = sys.argv[1] if len(sys.argv) > 1 else "BTCUSDT"
     interval = sys.argv[2] if len(sys.argv) > 2 else "1h"
     limit = int(sys.argv[3]) if len(sys.argv) > 3 else 10

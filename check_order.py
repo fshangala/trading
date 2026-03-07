@@ -32,6 +32,7 @@ def check_order(order_id, symbol="BTCUSDT"):
         return None
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     if len(sys.argv) < 2:
         print("Usage: python check_order.py <order_id> [symbol]")
         sys.exit(1)

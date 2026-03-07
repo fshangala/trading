@@ -83,6 +83,7 @@ def find_crossover(symbol="BTCUSDT", interval="1h", limit=500):
         print(f"Error: {e}")
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     symbol = sys.argv[1] if len(sys.argv) > 1 else "BNBUSDT"
     interval = sys.argv[2] if len(sys.argv) > 2 else "1h"
     find_crossover(symbol, interval, limit=500)

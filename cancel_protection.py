@@ -23,6 +23,7 @@ def cancel_protection_order(symbol, algo_id=None, client_algo_id=None):
         return None
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     if len(sys.argv) < 3:
         print("Usage: python cancel_protection.py <symbol> <algo_id>")
         sys.exit(1)

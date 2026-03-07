@@ -55,11 +55,13 @@ def run_script(script_name, args):
         logging.info(f"Script output: {result.stdout}")
     return result
 
-def execute_action(alert):
+def execute_action(alert, eval_context):
     action = alert.get("action")
     params = alert.get("action_params", {})
     symbol = alert["symbol"]
     alert_id = alert["id"]
+    price = eval_context.get("price")
+    atr = eval_context.get("atr")
 
     if action == "adjust_sl":
         msg = f"Action required: Adjust SL for {symbol} to {params['new_sl']}"
@@ -71,22 +73,42 @@ def execute_action(alert):
         logging.info(msg)
         notify(f"ACTION: {alert_id}", msg)
         run_script("place_order.py", [symbol, "BUY", "MARKET", params['qty'], "LONG"])
-        # Set TP/SL if provided
-        if "sl" in params:
-            run_script("protection_order.py", [symbol, "SELL", "LONG", "STOP", params['sl']])
-        if "tp" in params:
-            run_script("protection_order.py", [symbol, "SELL", "LONG", "TP", params['tp']])
+        
+        sl = params.get("sl")
+        tp = params.get("tp")
+        
+        if params.get("use_atr") and atr:
+            mult = params.get("atr_mult", 2.0)
+            rr = params.get("rr_ratio", 1.5)
+            sl = price - (mult * atr)
+            tp = price + (rr * (price - sl))
+            logging.info(f"Calculated ATR-based SL: {sl:.4f}, TP: {tp:.4f} (ATR: {atr:.4f}, Price: {price:.4f})")
+
+        if sl:
+            run_script("protection_order.py", [symbol, "SELL", "LONG", "STOP", sl])
+        if tp:
+            run_script("protection_order.py", [symbol, "SELL", "LONG", "TP", tp])
 
     elif action == "open_short":
         msg = f"Opening SHORT for {symbol} with qty {params['qty']}"
         logging.info(msg)
         notify(f"ACTION: {alert_id}", msg)
         run_script("place_order.py", [symbol, "SELL", "MARKET", params['qty'], "SHORT"])
-        # Set TP/SL if provided
-        if "sl" in params:
-            run_script("protection_order.py", [symbol, "BUY", "SHORT", "STOP", params['sl']])
-        if "tp" in params:
-            run_script("protection_order.py", [symbol, "BUY", "SHORT", "TP", params['tp']])
+        
+        sl = params.get("sl")
+        tp = params.get("tp")
+
+        if params.get("use_atr") and atr:
+            mult = params.get("atr_mult", 2.0)
+            rr = params.get("rr_ratio", 1.5)
+            sl = price + (mult * atr)
+            tp = price - (rr * (sl - price))
+            logging.info(f"Calculated ATR-based SL: {sl:.4f}, TP: {tp:.4f} (ATR: {atr:.4f}, Price: {price:.4f})")
+
+        if sl:
+            run_script("protection_order.py", [symbol, "BUY", "SHORT", "STOP", sl])
+        if tp:
+            run_script("protection_order.py", [symbol, "BUY", "SHORT", "TP", tp])
     
     else:
         # Default notification if no action logic is matched
@@ -166,7 +188,7 @@ def check_alerts():
                 logging.info(f"Condition MET for {alert['id']}!")
                 
                 # Execute action (handles action-specific or default notifications)
-                execute_action(alert)
+                execute_action(alert, eval_context)
                 
                 # Deactivate the triggered alert
                 alert["active"] = False
