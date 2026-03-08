@@ -248,7 +248,7 @@ def check_alerts():
             if precise_price:
                 eval_context["price"] = precise_price
 
-        defaults = {"price": 0, "pos_amt": 0, "ema7": None, "ema25": None, "ema99": None, "rsi": None, "atr": 0, "is_squeeze": False, "trend_bias": "neutral"}
+        defaults = {"price": 0, "pos_amt": 0, "ema7": None, "ema25": None, "ema99": None, "rsi": None, "atr": 0, "macd_hist": 0, "is_squeeze": False, "trend_bias": "neutral"}
         for k, v in defaults.items():
             if k not in eval_context: eval_context[k] = v
 
