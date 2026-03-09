@@ -4,8 +4,16 @@ from config import get_client
 from get_balance import get_futures_balance
 from indicators import get_indicators
 
-
 def get_symbol_data(symbol):
+    """
+    Fetches exchange information and current price for a specific symbol.
+
+    Parameters:
+    - symbol (str): The trading pair symbol (e.g., 'BTCUSDT').
+
+    Returns:
+    - dict: A dictionary containing 'precision', 'price', and 'min_qty' if successful, None otherwise.
+    """
     client = get_client()
     try:
         resp = client.rest_api.exchange_information()
@@ -34,6 +42,18 @@ def get_symbol_data(symbol):
         return None
 
 def calculate_quantity_margin(symbol, margin_percent, leverage, pos_side):
+    """
+    Calculates the quantity to trade based on a percentage of the available margin and leverage.
+
+    Parameters:
+    - symbol (str): The trading pair symbol (e.g., 'BTCUSDT').
+    - margin_percent (float): The percentage of the wallet balance to use as margin (0-100).
+    - leverage (float): The leverage to apply to the margin.
+    - pos_side (str): The position side ('LONG' or 'SHORT').
+
+    Returns:
+    - float: The calculated quantity, or None if an error occurs.
+    """
     # 1. Get Balance
     balance_data = get_futures_balance("USDT")
     if not balance_data:
@@ -102,8 +122,15 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     
     if len(sys.argv) < 5:
-        print("Usage: python calculate_qty.py <symbol> <margin_percent> <leverage> <pos_side:LONG|SHORT>")
-        print("Example: python calculate_qty.py BTCUSDT 20 20 LONG")
+        print("\n--- Position Size Calculator ---")
+        print("Usage: python calculate_qty.py <symbol> <margin_percent> <leverage> <pos_side:LONG|SHORT>\n")
+        print("Arguments:")
+        print("  <symbol>         : The symbol to trade (e.g. BTCUSDT)")
+        print("  <margin_percent> : Percentage of wallet balance to use (0-100)")
+        print("  <leverage>       : The leverage to use (e.g. 20)")
+        print("  <pos_side>       : LONG or SHORT\n")
+        print("Example:")
+        print("  python calculate_qty.py BTCUSDT 20 20 LONG")
         sys.exit(1)
         
     symbol = sys.argv[1]

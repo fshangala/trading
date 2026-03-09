@@ -6,6 +6,16 @@ from config import get_client
 # logging.basicConfig(level=logging.INFO)
 
 def show_orders(symbol="BTCUSDT", limit=10):
+    """
+    Fetches and displays the most recent orders for a given symbol on Binance Futures.
+
+    Parameters:
+    - symbol (str): The trading pair symbol. Defaults to 'BTCUSDT'.
+    - limit (int): The number of orders to fetch. Defaults to 10.
+
+    Returns:
+    - list: A list of order data if successful, None otherwise.
+    """
     client = get_client()
 
     try:
@@ -14,7 +24,7 @@ def show_orders(symbol="BTCUSDT", limit=10):
         orders = response.data()
         
         print(f"\n--- RECENT ORDERS: {symbol} ---")
-        # Reverse to show newest first
+        # Show newest first
         for order in reversed(orders):
             print(f"ID:      {order.order_id}")
             print(f"Status:  {order.status}")
@@ -36,5 +46,17 @@ def show_orders(symbol="BTCUSDT", limit=10):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
+    
+    if len(sys.argv) > 1 and sys.argv[1] in ["-h", "--help"]:
+        print("\n--- Binance Futures Order History ---")
+        print("Usage: python show_orders.py [symbol] [limit]\n")
+        print("Arguments:")
+        print("  [symbol] : The symbol to check (default: BTCUSDT)")
+        print("  [limit]  : The number of orders to fetch (default: 10)\n")
+        print("Example:")
+        print("  python show_orders.py ETHUSDT 5")
+        sys.exit(0)
+
     symbol = sys.argv[1] if len(sys.argv) > 1 else "BTCUSDT"
-    show_orders(symbol)
+    limit = int(sys.argv[2]) if len(sys.argv) > 2 else 10
+    show_orders(symbol, limit=limit)

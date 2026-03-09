@@ -24,6 +24,17 @@ Follow the **Trend Following Strategy** defined in `STRATEGY.md`:
 6.  **Monitoring:** Use `show_positions.py` and `show_protection_orders.py` to track active trades.
 7.  **Audit:** Use `get_fees.py` after a trade is closed to calculate net PnL and fees.
 
+## Trade Journaling
+
+- **Purpose:** To log analysis, entry/exit decisions, and results for future reference.
+- **Naming Format:** Use the format `journal-<symbol>-<date>.md` (e.g., `journal-BNBUSDT-2026-03-09.md`).
+- **Workflow:** 
+    - Maintain an active journal during the trade session.
+    - Log every step: initial analysis, entry plan, execution, protection levels, and final closing audit.
+- **Content:** Each entry must include a timestamp, current price, technical rationale (indicators/trends), and the specific action taken.
+- **Git Safety:** All files matching `journal-*.md` are excluded from version control via `.gitignore`.
+
+
 ## Automated Monitoring System
 
 The workspace includes a background monitor (`monitor.py`) that uses `alerts.json` for rule-based actions.

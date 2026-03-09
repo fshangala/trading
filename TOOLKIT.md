@@ -39,29 +39,35 @@ All scripts automatically load these settings using `config.py`.
 
 ## Script Reference
 
+All scripts support `-h` or `--help` for detailed usage instructions.
+
 | Script | Description | Primary Usage |
 | :--- | :--- | :--- |
 | `get_candles.py` | Fetches OHLCV data. | `python get_candles.py <symbol> <interval> <limit>` |
-| `indicators.py` | Calculates EMA 7, 25, 99 and VWAP. | `python indicators.py <symbol> <interval>` |
-| `place_order.py` | Executes Market/Limit orders. | `python place_order.py <symbol> <side> <type> <qty> <pos_side> [price]` |
+| `indicators.py` | Calculates EMA, MACD, RSI, Bollinger, ATR, VWAP, OBV. | `python indicators.py <symbol> <interval>` |
+| `calculate_qty.py` | Calculates quantity based on margin % and leverage. | `python calculate_qty.py <symbol> <margin_percent> <leverage> <pos_side>` |
+| `place_order.py` | Executes Market, Limit, or Trailing Stop orders. | `python place_order.py <symbol> <side> <type> <qty> <pos_side> [price/callback] [activation]` |
 | `cancel_order.py` | Cancels a specific order. | `python cancel_order.py <symbol> <order_id>` |
-| `protection_order.py` | Sets TP, SL, and Trailing stops. | `python protection_order.py <symbol> <side> <pos_side> <type:STOP\|TP\|TRAILING> <price/callback> [working_type/activation] [qty]` |
+| `protection_order.py` | Sets TP, SL, and Trailing stops (Algo orders). | `python protection_order.py <symbol> <side> <pos_side> <type> [trigger/callback] [working/activate] [qty] [close_position]` |
 | `cancel_protection.py` | Cancels a specific algo order. | `python cancel_protection.py <symbol> <algo_id>` |
-| `show_protection_orders.py` | Displays open TP/SL orders. | `python show_protection_orders.py [symbol]` |
-| `show_positions.py` | Displays active positions. | `python show_positions.py [symbol]` |
-| `show_orders.py` | Lists recent order history. | `python show_orders.py [symbol]` |
-| `check_order.py` | Detailed status of one order. | `python check_order.py <order_id> [symbol]` |
-| `get_balance.py` | Fetches available futures balance. | `python get_balance.py [asset]` |
-| `get_crossover.py` | Finds the last EMA 25/99 crossover. | `python get_crossover.py <symbol> <interval>` |
-| `get_fees.py` | Calculates PnL and Fees. | `python get_fees.py <entry> <exit> <qty> [symbol]` |
+| `show_protection_orders.py` | Displays open TP/SL/Trailing orders. | `python show_protection_orders.py [symbol]` |
+| `show_positions.py` | Displays active positions and unrealized PnL. | `python show_positions.py [symbol]` |
+| `show_orders.py` | Lists recent order history (filled/cancelled). | `python show_orders.py [symbol] [limit]` |
+| `check_order.py` | Detailed status and average fill price of an order. | `python check_order.py <order_id> [symbol]` |
+| `get_balance.py` | Fetches available futures balance (USDT/BNB/etc). | `python get_balance.py [asset]` |
+| `get_crossover.py` | Finds the last EMA 25/99 Golden/Death Cross. | `python get_crossover.py <symbol> <interval> [limit]` |
+| `get_trades.py` | Fetches historical account trade list. | `python get_trades.py [symbol] [limit]` |
+| `get_fees.py` | Calculates commissions and net PnL for a trade. | `python get_fees.py <entry> <exit> <qty> [symbol]` |
+| `monitor.py` | Background market and alert monitoring system. | `python monitor.py [--once]` |
 
 ## Typical Workflow
 1. **Analyze:** Run `indicators.py` and `get_candles.py` to determine trend and volatility.
-2. **Execute:** Use `place_order.py` to enter a position.
-3. **Verify:** Use `check_order.py` to get the exact `avgPrice`.
-4. **Protect:** Use `protection_order.py` to set TP and SL based on entry.
-5. **Monitor:** Use `show_positions.py` to track unrealized PnL.
-6. **Analyze Costs:** Use `get_fees.py` after closing to audit net profit.
+2. **Plan:** Use `calculate_qty.py` to determine the position size.
+3. **Execute:** Use `place_order.py` to enter a position.
+4. **Verify:** Use `check_order.py` to get the exact `avgPrice`.
+5. **Protect:** Use `protection_order.py` to set TP and SL based on the verified entry price.
+6. **Monitor:** Use `show_positions.py` and `show_protection_orders.py` to track active trades.
+7. **Analyze Costs:** Use `get_fees.py` after closing to audit net profit and commissions.
 
 ## Automated Monitoring
 
@@ -83,11 +89,10 @@ Run the monitor in a background terminal:
 .\env\Scripts\python.exe monitor.py
 ```
 **How it works:**
-1. **Reloads Alerts:** The monitor reloads `alerts.json` at the start of every loop iteration (default 1 minute), allowing you to add or modify alerts without restarting the script.
-2. **Pre-fetches Data:** Efficiently fetches indicators, positions, and candles (in that order) for all active symbols upfront.
-2. **Evaluates Conditions:** Uses the cached market state to check if the `condition` in `alerts.json` is met.
-3. **Triggers Actions:** 
-   - **Automatic Notification:** Every triggered alert sends a notification. Action-specific alerts provide descriptive messages (e.g., "Opening LONG").
-   - `open_long` / `open_short`: Automatically executes trade and protection logic.
-   - `adjust_sl`: Prompts the user to adjust their stop loss.
-4. **Auto-Deactivation:** Once an alert is triggered, its `active` status is set to `false`. Any IDs listed in `disables` are also deactivated.
+1. **Reloads Alerts:** The monitor reloads `alerts.json` at every loop iteration (default 1 minute).
+2. **Pre-fetches Data:** Efficiently fetches indicators, positions, and prices for all active symbols upfront.
+3. **Evaluates Conditions:** Uses the cached market state to check if the `condition` in `alerts.json` is met.
+4. **Triggers Actions:** 
+   - **Automatic Notification:** Every triggered alert sends a notification.
+   - `open_long` / `open_short`: Automatically executes trade logic.
+5. **Auto-Deactivation:** Once an alert is triggered, its `active` status is set to `false`.

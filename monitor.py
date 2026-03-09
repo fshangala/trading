@@ -6,6 +6,7 @@ import winsound
 import ctypes
 import subprocess
 import threading
+import sys
 from indicators import get_indicators
 from get_candles import get_candles
 from show_positions import show_positions
@@ -23,12 +24,17 @@ logging.basicConfig(
 PYTHON_EXE = os.path.join("env", "Scripts", "python.exe")
 
 class DataManager:
+    """
+    Manages lazy-loading and caching of market data (indicators, positions, prices)
+    during a single monitoring loop iteration.
+    """
     def __init__(self):
         self.indicator_cache = {} # (symbol, interval) -> data
         self.position_cache = {}  # symbol -> pos_amt
         self.candle_cache = {}    # symbol -> price
 
     def get_indicators(self, symbol, interval):
+        """Fetches and caches technical indicators."""
         key = (symbol, interval)
         if key not in self.indicator_cache:
             logging.info(f"Fetching indicators for {symbol} ({interval})")
@@ -36,6 +42,7 @@ class DataManager:
         return self.indicator_cache[key]
 
     def get_position(self, symbol):
+        """Fetches and caches the current position size for a symbol."""
         if symbol not in self.position_cache:
             logging.info(f"Fetching position for {symbol}")
             positions = show_positions(symbol=symbol)
@@ -50,6 +57,7 @@ class DataManager:
         return self.position_cache[symbol]
 
     def get_price(self, symbol):
+        """Fetches and caches the latest 1m close price for a symbol."""
         if symbol not in self.candle_cache:
             logging.info(f"Fetching latest price for {symbol}")
             candles = get_candles(symbol=symbol, interval="1m", limit=1)
@@ -57,6 +65,7 @@ class DataManager:
         return self.candle_cache[symbol]
 
 def _show_message_box(title, message, sound_path=None):
+    """Internal helper to show a Windows MessageBox and play a looping sound."""
     # If sound path is provided, start the looping sound in this thread
     if sound_path and os.path.exists(sound_path):
         try:
@@ -75,6 +84,7 @@ def _show_message_box(title, message, sound_path=None):
         pass
 
 def _system_notification(title, message):
+    """Internal helper to trigger a transient PowerShell balloon tip notification."""
     # PowerShell Balloon Tip (Transient)
     ps_script = f"""
     [reflection.assembly]::loadwithpartialname('System.Windows.Forms');
@@ -89,6 +99,14 @@ def _system_notification(title, message):
     subprocess.run(["powershell", "-Command", ps_script], capture_output=True)
 
 def notify(title, message, notify_type="notify"):
+    """
+    Dispatches a notification (Transient or Persistent Alarm).
+
+    Parameters:
+    - title (str): The notification title.
+    - message (str): The notification body.
+    - notify_type (str): 'notify' (transient) or 'alarm' (persistent window + sound).
+    """
     logging.info(f"NOTIFICATION ({notify_type}): {title} - {message}")
     
     if notify_type == "alarm":
@@ -105,6 +123,7 @@ def notify(title, message, notify_type="notify"):
         except: pass
 
 def run_script(script_name, args):
+    """Executes a toolkit script as a subprocess."""
     cmd = [PYTHON_EXE, script_name] + [str(a) for a in args]
     logging.info(f"Executing automation: {' '.join(cmd)}")
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -113,6 +132,10 @@ def run_script(script_name, args):
     return result
 
 def execute_action(alert, eval_context):
+    """
+    Processes the 'action' defined in a triggered alert.
+    Handles order placement, stop-loss adjustments, and notifications.
+    """
     action = alert.get("action")
     params = alert.get("action_params", {})
     symbol = alert["symbol"]
@@ -183,6 +206,10 @@ def execute_action(alert, eval_context):
         pass
 
 def check_alerts():
+    """
+    Main alert logic: Reads 'alerts.json', evaluates conditions against live market data,
+    and executes triggered actions. Disables triggered alerts automatically.
+    """
     if not os.path.exists("alerts.json"): return
 
     try:
@@ -273,8 +300,20 @@ def check_alerts():
             json.dump(alerts, f, indent=4)
 
 def main():
-    import sys
+    """
+    Main loop for the monitor script.
+    Checks alerts every 60 seconds unless '--once' is specified.
+    """
     run_once = "--once" in sys.argv
+    
+    if "--help" in sys.argv or "-h" in sys.argv:
+        print("\n--- Binance Futures Market Monitor ---")
+        print("Usage: python monitor.py [--once]\n")
+        print("Arguments:")
+        print("  --once : Run only one check iteration and exit")
+        print("---------------------------------------\n")
+        sys.exit(0)
+
     logging.info(f"Monitor Active (Once: {run_once})")
     while True:
         try:

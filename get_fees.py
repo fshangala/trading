@@ -5,6 +5,21 @@ from config import get_client
 # logging.basicConfig(level=logging.INFO)
 
 def calculate_fees(entry_price, exit_price, quantity, symbol="BTCUSDT"):
+    """
+    Calculates the total trading fees (opening + closing) for a completed trade.
+
+    Fetches the current commission rates for the user's account and calculates
+    fees based on Taker rates (assuming Market orders).
+
+    Parameters:
+    - entry_price (float): The price at which the position was opened.
+    - exit_price (float): The price at which the position was closed.
+    - quantity (float): The amount of the asset traded.
+    - symbol (str): The trading pair symbol (e.g., 'BTCUSDT'). Defaults to 'BTCUSDT'.
+
+    Returns:
+    - float: The total fees in USDT.
+    """
     client = get_client()
 
     try:
@@ -16,7 +31,7 @@ def calculate_fees(entry_price, exit_price, quantity, symbol="BTCUSDT"):
         taker_rate = float(rates.taker_commission_rate)
         maker_rate = float(rates.maker_commission_rate)
         
-        logging.info(f"Commission Rates for {symbol}: Taker={taker_rate*100}%, Maker={maker_rate*100}%")
+        print(f"INFO:root:Commission Rates for {symbol}: Taker={taker_rate*100}%, Maker={maker_rate*100}%")
 
         # Since we used MARKET orders, we use Taker rates for both sides
         fee_open = entry_price * quantity * taker_rate
@@ -43,8 +58,17 @@ def calculate_fees(entry_price, exit_price, quantity, symbol="BTCUSDT"):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
+    
     if len(sys.argv) < 4:
-        print("Usage: python get_fees.py <entry_price> <exit_price> <quantity> [symbol]")
+        print("\n--- Binance Futures Fee Calculator ---")
+        print("Usage: python get_fees.py <entry_price> <exit_price> <quantity> [symbol]\n")
+        print("Arguments:")
+        print("  <entry_price> : Price at entry")
+        print("  <exit_price>  : Price at exit")
+        print("  <quantity>    : Amount of asset traded")
+        print("  [symbol]      : (Optional) The symbol (default: BTCUSDT)\n")
+        print("Example:")
+        print("  python get_fees.py 60000 61000 0.1 BTCUSDT")
         sys.exit(1)
     
     entry = float(sys.argv[1])

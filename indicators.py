@@ -9,6 +9,9 @@ from binance_sdk_derivatives_trading_usds_futures.rest_api.models import (
 # logging.basicConfig(level=logging.INFO) # Removed to allow importing scripts to configure logging
 
 def calculate_ema(prices, period):
+    """
+    Calculates the Exponential Moving Average (EMA) for a series of prices.
+    """
     if len(prices) < period:
         return None
     multiplier = 2 / (period + 1)
@@ -18,6 +21,9 @@ def calculate_ema(prices, period):
     return ema
 
 def calculate_rsi(prices, period=14):
+    """
+    Calculates the Relative Strength Index (RSI) for a series of prices.
+    """
     if len(prices) < period + 1:
         return None
     gains = []
@@ -36,6 +42,10 @@ def calculate_rsi(prices, period=14):
     return 100 - (100 / (1 + rs))
 
 def calculate_macd(prices, slow=26, fast=12, signal=9):
+    """
+    Calculates the Moving Average Convergence Divergence (MACD) indicator.
+    Returns: (macd_line, signal_line, histogram)
+    """
     def get_ema_series(data, period):
         if len(data) < period: return []
         ema_series = []
@@ -55,6 +65,10 @@ def calculate_macd(prices, slow=26, fast=12, signal=9):
     return macd_line[-1], signal_line_series[-1], macd_line[-1] - signal_line_series[-1]
 
 def calculate_bollinger_bands(prices, period=20, std_dev_mult=2):
+    """
+    Calculates Bollinger Bands for a series of prices.
+    Returns: (upper_band, middle_band, lower_band)
+    """
     if len(prices) < period: return None, None, None
     sma = sum(prices[-period:]) / period
     variance = sum((p - sma) ** 2 for p in prices[-period:]) / period
@@ -62,6 +76,9 @@ def calculate_bollinger_bands(prices, period=20, std_dev_mult=2):
     return sma + (std_dev_mult * std_dev), sma, sma - (std_dev_mult * std_dev)
 
 def calculate_atr(candles, period=14):
+    """
+    Calculates the Average True Range (ATR) from candlestick data.
+    """
     if len(candles) < period + 1: return None
     tr_list = []
     for i in range(1, len(candles)):
@@ -73,6 +90,9 @@ def calculate_atr(candles, period=14):
     return atr
 
 def calculate_obv(candles):
+    """
+    Calculates the On-Balance Volume (OBV) indicator.
+    """
     if len(candles) < 2: return 0
     obv = 0
     for i in range(1, len(candles)):
@@ -82,6 +102,9 @@ def calculate_obv(candles):
     return obv
 
 def calculate_vwap(candles):
+    """
+    Calculates the Volume Weighted Average Price (VWAP).
+    """
     total_pv = 0
     total_volume = 0
     for c in candles:
@@ -91,6 +114,16 @@ def calculate_vwap(candles):
     return total_pv / total_volume if total_volume != 0 else 0
 
 def get_indicators(symbol="BTCUSDT", interval="1h"):
+    """
+    Fetches candlestick data and calculates a suite of technical indicators for a symbol.
+
+    Parameters:
+    - symbol (str): The trading pair symbol.
+    - interval (str): The timeframe (e.g. '15m', '1h').
+
+    Returns:
+    - dict: A dictionary containing calculated indicators and current price.
+    """
     client = get_client()
     try:
         limit = 200
@@ -135,9 +168,22 @@ def get_indicators(symbol="BTCUSDT", interval="1h"):
         print("------------------------------------\n")
         return res
     except Exception as e:
-        logging.error(f"Error: {e}")
+        logging.error(f"Error calculating indicators: {e}")
         return None
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    get_indicators(sys.argv[1] if len(sys.argv) > 1 else "BTCUSDT", sys.argv[2] if len(sys.argv) > 2 else "1h")
+    
+    if len(sys.argv) > 1 and sys.argv[1] in ["-h", "--help"]:
+        print("\n--- Technical Indicators Analysis ---")
+        print("Usage: python indicators.py [symbol] [interval]\n")
+        print("Arguments:")
+        print("  [symbol]   : The symbol to analyze (default: BTCUSDT)")
+        print("  [interval] : Timeframe: 1m, 3m, 5m, 15m, 30m, 1h, 4h, 1d (default: 1h)\n")
+        print("Example:")
+        print("  python indicators.py ETHUSDT 15m")
+        sys.exit(0)
+
+    symbol = sys.argv[1] if len(sys.argv) > 1 else "BTCUSDT"
+    interval = sys.argv[2] if len(sys.argv) > 2 else "1h"
+    get_indicators(symbol, interval)

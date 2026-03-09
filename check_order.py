@@ -5,6 +5,16 @@ from config import get_client
 # logging.basicConfig(level=logging.INFO)
 
 def check_order(order_id, symbol="BTCUSDT"):
+    """
+    Queries the status of a specific order on Binance Futures.
+
+    Parameters:
+    - order_id (int/str): The Binance order ID to query.
+    - symbol (str): The trading pair symbol (e.g., 'BTCUSDT'). Defaults to 'BTCUSDT'.
+
+    Returns:
+    - dict: The order status data if successful, None otherwise.
+    """
     client = get_client()
 
     try:
@@ -34,7 +44,13 @@ def check_order(order_id, symbol="BTCUSDT"):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     if len(sys.argv) < 2:
-        print("Usage: python check_order.py <order_id> [symbol]")
+        print("\n--- Binance Futures Order Status Check ---")
+        print("Usage: python check_order.py <order_id> [symbol]\n")
+        print("Arguments:")
+        print("  <order_id> : The Binance order ID to check")
+        print("  [symbol]   : (Optional) The symbol (default: BTCUSDT)\n")
+        print("Example:")
+        print("  python check_order.py 12345678 BTCUSDT")
         sys.exit(1)
     
     order_id = sys.argv[1]

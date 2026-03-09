@@ -4,12 +4,22 @@ import datetime
 from config import get_client
 
 def get_trades(symbol="BNBUSDT", limit=10):
+    """
+    Fetches the user's recent trade history for a specific symbol on Binance Futures.
+
+    Parameters:
+    - symbol (str): The trading pair symbol (e.g., 'BTCUSDT'). Defaults to 'BNBUSDT'.
+    - limit (int): The number of recent trades to fetch. Defaults to 10.
+
+    Returns:
+    - list: A list of trade data if successful, None otherwise.
+    """
     client = get_client()
 
     try:
         logging.info(f"Fetching last {limit} trades for {symbol}...")
-        # Most binance SDKs have account_trade_list or user_trades
-        # Trying user_trades based on common SDK patterns
+        
+        # Fetching historical account trade list
         response = client.rest_api.account_trade_list(symbol=symbol, limit=limit)
         trades = response.data()
         
@@ -18,25 +28,25 @@ def get_trades(symbol="BNBUSDT", limit=10):
             # Assuming trade is a model or dict
             if isinstance(trade, dict):
                 side = "BUY" if trade.get('buyer') else "SELL"
-                print(f"ID:      {trade.get('id')}")
-                print(f"Order:   {trade.get('orderId')}")
-                print(f"Side:    {side}")
-                print(f"Price:   {trade.get('price')}")
-                print(f"Qty:     {trade.get('qty')}")
+                print(f"ID:           {trade.get('id')}")
+                print(f"Order:        {trade.get('orderId')}")
+                print(f"Side:         {side}")
+                print(f"Price:        {trade.get('price')}")
+                print(f"Qty:          {trade.get('qty')}")
                 print(f"Realized PnL: {trade.get('realizedPnl')} USDT")
                 time_val = trade.get('time')
             else:
                 side = "BUY" if trade.buyer else "SELL"
-                print(f"ID:      {trade.id}")
-                print(f"Order:   {trade.order_id}")
-                print(f"Side:    {side}")
-                print(f"Price:   {trade.price}")
-                print(f"Qty:     {trade.qty}")
+                print(f"ID:           {trade.id}")
+                print(f"Order:        {trade.order_id}")
+                print(f"Side:         {side}")
+                print(f"Price:        {trade.price}")
+                print(f"Qty:          {trade.qty}")
                 print(f"Realized PnL: {trade.realized_pnl} USDT")
                 time_val = trade.time
             
             time_str = datetime.datetime.fromtimestamp(time_val/1000).strftime('%Y-%m-%d %H:%M:%S')
-            print(f"Time:    {time_str}")
+            print(f"Time:         {time_str}")
             print(f"------------------------")
         print("")
         
@@ -44,11 +54,21 @@ def get_trades(symbol="BNBUSDT", limit=10):
 
     except Exception as e:
         logging.error(f"Failed to fetch trades: {e}")
-        # Try to list available methods if it fails
-        logging.info(f"Available methods in rest_api: {[m for m in dir(client.rest_api) if not m.startswith('_')]}")
         return None
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
+    
+    if len(sys.argv) > 1 and sys.argv[1] in ["-h", "--help"]:
+        print("\n--- Binance Futures Account Trade History ---")
+        print("Usage: python get_trades.py [symbol] [limit]\n")
+        print("Arguments:")
+        print("  [symbol] : The symbol to check (default: BNBUSDT)")
+        print("  [limit]  : The number of trades to fetch (default: 10)\n")
+        print("Example:")
+        print("  python get_trades.py BTCUSDT 5")
+        sys.exit(0)
+
     symbol = sys.argv[1] if len(sys.argv) > 1 else "BNBUSDT"
-    get_trades(symbol)
+    limit = int(sys.argv[2]) if len(sys.argv) > 2 else 10
+    get_trades(symbol, limit=limit)

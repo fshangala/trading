@@ -8,6 +8,20 @@ from binance_sdk_derivatives_trading_usds_futures.rest_api.models import (
 )
 
 def find_crossover(symbol="BTCUSDT", interval="1h", limit=500):
+    """
+    Analyzes historical candlestick data to identify the most recent EMA 25/99 crossover.
+
+    A 'Golden Cross' occurs when the EMA 25 crosses above the EMA 99 (bullish).
+    A 'Death Cross' occurs when the EMA 25 crosses below the EMA 99 (bearish).
+
+    Parameters:
+    - symbol (str): The trading pair symbol (e.g., 'BTCUSDT'). Defaults to 'BTCUSDT'.
+    - interval (str): The timeframe (e.g., '1h', '1d'). Defaults to '1h'.
+    - limit (int): The number of candles to analyze. Defaults to 500.
+
+    Returns:
+    - None (prints results to console).
+    """
     client = get_client()
 
     try:
@@ -84,6 +98,19 @@ def find_crossover(symbol="BTCUSDT", interval="1h", limit=500):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
+    
+    if len(sys.argv) > 1 and sys.argv[1] in ["-h", "--help"]:
+        print("\n--- EMA 25/99 Crossover Finder ---")
+        print("Usage: python get_crossover.py [symbol] [interval] [limit]\n")
+        print("Arguments:")
+        print("  [symbol]   : The symbol (default: BNBUSDT)")
+        print("  [interval] : Timeframe: 1m, 5m, 15m, 1h, 4h, 1d (default: 1h)")
+        print("  [limit]    : Number of candles to analyze (default: 500)\n")
+        print("Example:")
+        print("  python get_crossover.py BTCUSDT 15m 1000")
+        sys.exit(0)
+
     symbol = sys.argv[1] if len(sys.argv) > 1 else "BNBUSDT"
     interval = sys.argv[2] if len(sys.argv) > 2 else "1h"
-    find_crossover(symbol, interval, limit=500)
+    limit = int(sys.argv[3]) if len(sys.argv) > 3 else 500
+    find_crossover(symbol, interval, limit=limit)

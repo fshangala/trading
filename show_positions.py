@@ -5,6 +5,15 @@ from config import get_client
 # logging.basicConfig(level=logging.INFO) # Removed to allow importing scripts to configure logging
 
 def show_positions(symbol=None):
+    """
+    Fetches and displays active (non-zero) positions on the USDS-M Futures account.
+
+    Parameters:
+    - symbol (str, optional): The symbol to filter by. If None, shows all active positions.
+
+    Returns:
+    - list: A list of position data if successful, None otherwise.
+    """
     client = get_client()
 
     try:
@@ -48,5 +57,13 @@ def show_positions(symbol=None):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
+    
+    if len(sys.argv) > 1 and sys.argv[1] in ["-h", "--help"]:
+        print("\n--- Binance Futures Active Positions ---")
+        print("Usage: python show_positions.py [symbol]\n")
+        print("Arguments:")
+        print("  [symbol] : (Optional) Filter by symbol (e.g. BTCUSDT)\n")
+        sys.exit(0)
+
     symbol = sys.argv[1] if len(sys.argv) > 1 else None
     show_positions(symbol)

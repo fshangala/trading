@@ -1,4 +1,5 @@
 import os
+import sys
 from dotenv import load_dotenv, find_dotenv
 
 # Load explicitly
@@ -14,7 +15,15 @@ from binance_common.constants import (
 
 def get_config():
     """
-    Returns API keys and base path based on the TESTNET environment variable.
+    Retrieves API keys, environment settings, and proxy configuration from environment variables.
+
+    Environment Variables:
+    - TESTNET: 'true' (default) or 'false'.
+    - USE_PROXY: 'true' or 'false'.
+    - BINANCE_API_PROXY_HOST, BINANCE_API_PROXY_PORT, etc.
+
+    Returns:
+    - dict: Configuration dictionary with api_key, api_secret, base_path, stream_url, proxy, and is_testnet.
     """
     # Check if TESTNET is set to "true"
     use_testnet = os.getenv("TESTNET", "true").lower() == "true"
@@ -61,7 +70,10 @@ def get_config():
 
 def get_client():
     """
-    Returns a configured DerivativesTradingUsdsFutures client.
+    Initializes and returns a configured DerivativesTradingUsdsFutures client for Binance REST API and WebSocket streams.
+
+    Returns:
+    - DerivativesTradingUsdsFutures: The initialized client object.
     """
     config_data = get_config()
 
@@ -82,16 +94,24 @@ def get_client():
         config_ws_streams=config_ws
     )
 
-
-
 if __name__ == "__main__":
     config = get_config()
     env_name = "TESTNET" if config["is_testnet"] else "LIVE"
-    print(f"Current Environment: {env_name}")
-    print(f"Base Path:           {config['base_path']}")
+    
+    print("\n--- Binance Futures Configuration Check ---")
+    print(f"Environment:   {env_name}")
+    print(f"Base Path:     {config['base_path']}")
+    print(f"Stream URL:    {config['stream_url']}")
+    
     # Print partial key for verification
     key = config['api_key']
     if key:
-        print(f"API Key:             {key[:5]}...{key[-5:]}")
+        print(f"API Key:       {key[:5]}...{key[-5:]}")
     else:
-        print("API Key:             Not Found")
+        print("API Key:       NOT FOUND")
+        
+    if config['proxy']:
+        print(f"Proxy Status:  ACTIVE ({config['proxy']['host']}:{config['proxy']['port']})")
+    else:
+        print(f"Proxy Status:  INACTIVE")
+    print("-------------------------------------------\n")
