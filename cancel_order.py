@@ -26,7 +26,7 @@ def cancel_order(symbol, order_id=None, client_order_id=None):
         if client_order_id:
             params["client_order_id"] = client_order_id
             
-        response = client.rest_api.cancel_order(**params)
+        response = client.rest_api.cancel_order(**params, recv_window=10000)
         
         data = response.data()
         logging.info(f"Cancellation Successful! ID: {data.order_id}, Status: {data.status}")

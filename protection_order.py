@@ -61,7 +61,7 @@ def set_protection_order(symbol, side, position_side, order_type, trigger_price=
         if activate_price:
             params["activate_price"] = float(activate_price)
 
-        response = client.rest_api.new_algo_order(**params)
+        response = client.rest_api.new_algo_order(**params, recv_window=10000)
         
         data = response.data()
         logging.info(f"Protection Order Successful! ID: {data.algo_id}")

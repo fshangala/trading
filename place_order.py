@@ -45,7 +45,7 @@ def place_order(symbol, side, order_type, quantity, position_side, price=None, c
                 params["activation_price"] = float(activation_price)
             params["reduce_only"] = "true"
 
-        response = client.rest_api.new_order(**params)
+        response = client.rest_api.new_order(**params, recv_window=10000)
         
         data = response.data()
         logging.info(f"Order Successful! ID: {data.order_id}, Status: {data.status}")

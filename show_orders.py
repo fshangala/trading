@@ -20,7 +20,7 @@ def show_orders(symbol="BTCUSDT", limit=10):
 
     try:
         logging.info(f"Fetching last {limit} orders for {symbol}...")
-        response = client.rest_api.all_orders(symbol=symbol, limit=limit)
+        response = client.rest_api.all_orders(symbol=symbol, limit=limit, recv_window=10000)
         orders = response.data()
         
         print(f"\n--- RECENT ORDERS: {symbol} ---")

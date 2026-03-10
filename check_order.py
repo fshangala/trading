@@ -21,7 +21,8 @@ def check_order(order_id, symbol="BTCUSDT"):
         logging.info(f"Checking status for order ID: {order_id} ({symbol})")
         response = client.rest_api.query_order(
             symbol=symbol,
-            order_id=int(order_id)
+            order_id=int(order_id),
+            recv_window=10000
         )
         
         data = response.data()

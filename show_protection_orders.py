@@ -18,7 +18,7 @@ def show_protection_orders(symbol=None):
 
     try:
         logging.info(f"Fetching open protection (algo) orders{' for ' + symbol if symbol else ''}...")
-        response = client.rest_api.current_all_algo_open_orders(symbol=symbol)
+        response = client.rest_api.current_all_algo_open_orders(symbol=symbol, recv_window=10000)
         orders = response.data()
         
         print(f"\n--- OPEN PROTECTION ORDERS ---")

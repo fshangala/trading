@@ -19,7 +19,7 @@ def get_futures_balance(asset="USDT"):
 
     try:
         logging.info(f"Fetching futures account balance for {asset}...")
-        response = client.rest_api.futures_account_balance_v2()
+        response = client.rest_api.futures_account_balance_v2(recv_window=10000)
         balances = response.data()
         
         for balance in balances:

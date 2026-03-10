@@ -66,33 +66,32 @@ All scripts support `-h` or `--help` for detailed usage instructions.
 3. **Execute:** Use `place_order.py` to enter a position.
 4. **Verify:** Use `check_order.py` to get the exact `avgPrice`.
 5. **Protect:** Use `protection_order.py` to set TP and SL based on the verified entry price.
-6. **Monitor:** Use `show_positions.py` and `show_protection_orders.py` to track active trades.
-7. **Analyze Costs:** Use `get_fees.py` after closing to audit net profit and commissions.
+| `check_alert.py` | Automated alert checker for all active alerts. | `python check_alert.py [--interval <val>] [--symbol <sym>] [--price <prc>]` |
+| `monitor_ws.py` | Real-time WebSocket monitor and alert trigger. | `python monitor_ws.py` |
 
 ## Automated Monitoring
 
-The toolkit includes a background monitoring system consisting of `monitor.py` and `alerts.json`. This system allows for rule-based alerts and automated trade actions.
+The toolkit includes a real-time WebSocket monitoring system (`monitor_ws.py`) and a condition-evaluation engine (`check_alert.py`).
 
 ### Configuration (`alerts.json`)
-The `alerts.json` file contains a list of alert objects. Each object can include:
+The `alerts.json` file contains a list of alert objects:
 - `id`: Unique identifier for the alert.
 - `symbol`: The trading pair (e.g., `BTCUSDT`).
-- `condition`: A Python-evaluable string (e.g., `price < 60000` or `pos_amt == 0`).
-- `action`: The action to take when the condition is met (`open_long`, `open_short`, `adjust_sl`, or omit for default notification).
-- `action_params`: (Optional) A dictionary of parameters for the action.
-- `disables`: (Optional) A list of alert IDs to deactivate when this alert is triggered.
-- `active`: A boolean to enable or disable the alert.
+- `condition`: A Python-evaluable string (e.g., `price < 60000`, `rsi > 70`, `pos_amt == 0`).
+- `interval`: (Optional) The timeframe for indicators. Set to `null` or omit for real-time price/position checks.
+- `action`: Action to take (`open_long`, `open_short`, `notify`).
+- `action_params`: Parameters for the action (e.g., `{"margin_percent": 10, "use_atr": true}`).
+- `disables`: (Optional) A list of other alert IDs to deactivate when this alert triggers.
+- `active`: Boolean to enable/disable the alert.
 
-### Execution (`monitor.py`)
-Run the monitor in a background terminal:
-```powershell
-.\env\Scripts\python.exe monitor.py
-```
-**How it works:**
-1. **Reloads Alerts:** The monitor reloads `alerts.json` at every loop iteration (default 1 minute).
-2. **Pre-fetches Data:** Efficiently fetches indicators, positions, and prices for all active symbols upfront.
-3. **Evaluates Conditions:** Uses the cached market state to check if the `condition` in `alerts.json` is met.
-4. **Triggers Actions:** 
-   - **Automatic Notification:** Every triggered alert sends a notification.
-   - `open_long` / `open_short`: Automatically executes trade logic.
-5. **Auto-Deactivation:** Once an alert is triggered, its `active` status is set to `false`.
+### Optimization & Reliability
+- **WebSocket Efficiency:** `monitor_ws.py` subscribes to the `1m` stream for all real-time alerts (`interval: null`) to ensure high-frequency updates.
+- **Redundant API Calls:** `monitor_ws.py` passes the latest `price` and `symbol` directly to `check_alert.py`, which skips the API price fetch if these arguments are provided.
+- **Race Condition Handling:** Both scripts use a retry-based file loading/saving mechanism for `alerts.json` to prevent corruption during simultaneous access (common on Windows).
+
+### Execution
+1. **WebSocket Monitor:** Run `python monitor_ws.py` in the background. It subscribes to streams for all active alerts.
+   - Triggers `check_alert.py` (no interval) from the `1m` stream for real-time responsiveness.
+   - Triggers `check_alert.py --interval <val>` only when a candle closes for the specified timeframe.
+2. **Alert Checker:** `check_alert.py` reads `alerts.json`, evaluates conditions using local context (passed price) or fetched indicators, and executes actions. It automatically deactivates triggered alerts.
+

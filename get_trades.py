@@ -20,7 +20,7 @@ def get_trades(symbol="BNBUSDT", limit=10):
         logging.info(f"Fetching last {limit} trades for {symbol}...")
         
         # Fetching historical account trade list
-        response = client.rest_api.account_trade_list(symbol=symbol, limit=limit)
+        response = client.rest_api.account_trade_list(symbol=symbol, limit=limit, recv_window=10000)
         trades = response.data()
         
         print(f"\n--- RECENT TRADES: {symbol} ---")

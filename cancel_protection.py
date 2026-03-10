@@ -22,7 +22,8 @@ def cancel_protection_order(symbol, algo_id=None, client_algo_id=None):
         logging.info(f"Cancelling protection order {algo_id if algo_id else client_algo_id} for {symbol}...")
         response = client.rest_api.cancel_algo_order(
             algo_id=algo_id,
-            client_algo_id=client_algo_id
+            client_algo_id=client_algo_id,
+            recv_window=10000
         )
         
         data = response.data()

@@ -4,3 +4,4 @@ env
 alerts.json
 monitor.log
 journal-*.md
+monitor_ws.log

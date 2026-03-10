@@ -37,18 +37,21 @@ Follow the **Trend Following Strategy** defined in `STRATEGY.md`:
 
 ## Automated Monitoring System
 
-The workspace includes a background monitor (`monitor.py`) that uses `alerts.json` for rule-based actions.
+The workspace includes a real-time WebSocket monitor (`monitor_ws.py`) and an automated alert checker (`check_alert.py`).
 
-- **Configuring Alerts:** You can add or modify alerts in `alerts.json`.
-    - `condition`: Use Python-style logic (e.g., `price < 70000`, `pos_amt == 0`).
-    - `action`: `open_long`, `open_short`, or `adjust_sl`. If omitted, defaults to a notification.
-    - `action_params`: Pass arguments like `qty`, `tp`, or `sl`.
-    - **Example Alert:** `{"id": "btc_breakout", "symbol": "BTCUSDT", "condition": "price > 75000", "action": "open_long", "action_params": {"qty": 0.001}, "active": true}`
-    - **Note:** The monitor reloads `alerts.json` every loop iteration (default 1 minute).
+- **Configuring Alerts:** Add or modify alerts in `alerts.json`.
+    - `condition`: Use Python-style logic (e.g., `price < 70000`, `rsi > 70`, `pos_amt == 0`).
+    - `interval`: (Optional) The timeframe for indicators. Set to `null` or omit for real-time price checks.
+    - `action`: `open_long`, `open_short`, or `notify`.
+    - `action_params`: Arguments like `qty`, `margin_percent`, `leverage`, `use_atr`, etc.
+    - `disables`: (Optional) List of alert IDs to deactivate when this alert triggers.
 - **Running the Monitor:** 
-  - Start loop: `.\env\Scripts\python.exe monitor.py`
-  - Test once: `.\env\Scripts\python.exe monitor.py --once`
-- **Management:** Triggered alerts are automatically set to `active: false`. Re-enable them if needed.
+  - Start monitor: `.\env\Scripts\python.exe monitor_ws.py`
+  - The monitor subscribes to active symbols and triggers `check_alert.py` on price updates and candle closes.
+- **Optimization:**
+  - `monitor_ws.py` uses the `1m` stream for real-time alerts.
+  - `check_alert.py` supports `--symbol` and `--price` arguments to skip redundant API calls.
+  - Both scripts use retry-logic when accessing `alerts.json` to handle file-access conflicts.
 
 ## Tool Reference
 
@@ -58,11 +61,11 @@ The workspace includes a background monitor (`monitor.py`) that uses `alerts.jso
 | **Crossover** | `python get_crossover.py BNBUSDT 1h` |
 | **Calc Qty** | `python calculate_qty.py BTCUSDT 20 20 LONG` |
 | **Trade** | `python place_order.py BTCUSDT BUY MARKET 0.001 LONG` |
-| **Cancel** | `python cancel_order.py BTCUSDT 94480020406` |
-| **Protect** | `python protection_order.py BTCUSDT SELL LONG TRAILING 0.5` |
+| **Protect** | `python protection_order.py BTCUSDT SELL LONG TRAILING 1.0` |
+| **Alerts** | `python check_alert.py [--interval 1h] [--symbol BTCUSDT] [--price 60000]` |
+| **Monitor** | `python monitor_ws.py` |
 | **Positions** | `python show_positions.py` |
 | **Balance** | `python get_balance.py` |
-| **Orders** | `python show_orders.py BTCUSDT` |
 
 ## Strategic Guidance
 

@@ -22,7 +22,27 @@ To avoid analysis paralysis, indicators are prioritized by their role:
 - **Daily VWAP:** Identifies institutional "fair value" levels. Price significantly far from Daily VWAP suggests the asset is overextended (high probability of mean reversion).
 
 ## 2. Market Analysis Protocol
-Before every trade, analyze the 1h (Primary) and 15m (Entry) timeframes.
+Operate across a hierarchical timeframe model to align macro bias with precision execution.
+
+### Tier 1: Macro Bias (1h)
+- **Role:** Trend Direction & Major Support/Resistance.
+- **Goal:** Identify the "Line in the Sand" (EMA 25/99).
+- **Mandate:** Only trade in the direction of the 1h EMA 25 bias (Long if Price > EMA 25).
+
+### Tier 2: Structural Integrity (15m)
+- **Role:** Identifying pullbacks and breakouts within the macro trend.
+- **Goal:** Monitor Bollinger Band status and EMA 99 (Intraday Trend).
+- **Mandate:** Look for price holding or reclaiming the 15m EMA 99 or Middle Bollinger Band.
+
+### Tier 3: Momentum & Entry Trigger (3m)
+- **Role:** Confirming trend shifts and momentum acceleration.
+- **Goal:** EMA 7/25 crossovers (Golden/Death Cross).
+- **Mandate:** Use 3m momentum shifts to signal the start of a "recollection" or "flush."
+
+### Tier 4: Precision Execution (1m)
+- **Role:** Timing the entry/exit to maximize risk/reward.
+- **Goal:** RSI cool-off (target 50-60 range) and candle close confirmations.
+- **Mandate:** Avoid "chasing" overbought moves (RSI > 80); wait for the 1m pullback.
 
 ### Step 1: Trend Confirmation & Age Analysis
 - **Bullish Bias:** Price > EMA 25 > EMA 99.

@@ -18,7 +18,7 @@ def show_positions(symbol=None):
 
     try:
         logging.info(f"Fetching active positions{' for ' + symbol if symbol else ''}...")
-        response = client.rest_api.position_information_v2(symbol=symbol)
+        response = client.rest_api.position_information_v2(symbol=symbol, recv_window=10000)
         positions = response.data()
         
         # Filter and display only non-zero positions
