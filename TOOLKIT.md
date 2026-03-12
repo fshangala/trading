@@ -75,12 +75,13 @@ The toolkit includes a real-time WebSocket monitoring system (`monitor_ws.py`) a
 
 ### Configuration (`alerts.json`)
 The `alerts.json` file contains a list of alert objects:
-- `id`: Unique identifier for the alert.
+- `id`: Unique identifier (used as the notification title).
 - `symbol`: The trading pair (e.g., `BTCUSDT`).
-- `condition`: A Python-evaluable string (e.g., `price < 60000`, `rsi > 70`, `pos_amt == 0`).
+- `condition`: A Python-evaluable string (e.g., `price < 60000`, `price >= bollinger_upper`, `rsi > 70`, `pos_amt == 0`).
+- `description`: Short text describing the alert (used as the notification body).
 - `interval`: (Optional) The timeframe for indicators. Set to `null` or omit for real-time price/position checks.
 - `action`: Action to take (`open_long`, `open_short`, `notify`).
-- `action_params`: Parameters for the action (e.g., `{"margin_percent": 10, "use_atr": true}`).
+- `action_params`: Parameters for the action (e.g., `{"margin_percent": 10, "type": "alarm"}`).
 - `disables`: (Optional) A list of other alert IDs to deactivate when this alert triggers.
 - `active`: Boolean to enable/disable the alert.
 

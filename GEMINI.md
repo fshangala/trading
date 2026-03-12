@@ -43,11 +43,16 @@ Follow the **Trend Following Strategy** defined in `STRATEGY.md`:
 The workspace includes a real-time WebSocket monitor (`monitor_ws.py`) and an automated alert checker (`check_alert.py`).
 
 - **Configuring Alerts:** Add or modify alerts in `alerts.json`.
-    - `condition`: Use Python-style logic (e.g., `price < 70000`, `rsi > 70`, `pos_amt == 0`).
+    - `condition`: Use Python-style logic. Available variables: `price`, `pos_amt`, `ema7`, `ema25`, `ema99`, `rsi`, `atr`, `vwap`, `obv`, `macd_hist`, `trend_bias`, `bollinger_upper`, `bollinger_middle`, `bollinger_lower`.
     - `interval`: (Optional) The timeframe for indicators. Set to `null` or omit for real-time price checks.
     - `action`: `open_long`, `open_short`, or `notify`.
-    - `action_params`: Arguments like `qty`, `margin_percent`, `leverage`, `use_atr`, etc.
+    - `action_params`: Arguments like `qty`, `margin_percent`, `leverage`, `use_atr`, etc. Set `type: "alarm"` for critical alerts.
+    - `description`: A short text displayed in the message body when the alert triggers.
     - `disables`: (Optional) List of alert IDs to deactivate when this alert triggers.
+- **Notification Logic:** 
+  - **Title:** The `id` of the alert is used as the notification title.
+  - **Body:** The `description` is used as the message body.
+  - **Urgency:** Supports standard `notify` (Balloon tip) and `alarm` (Blocking MessageBox + Sound).
 - **Running the Monitor:** 
   - Start monitor: `.\env\Scripts\python.exe monitor_ws.py`
   - The monitor subscribes to active symbols and triggers `check_alert.py` on price updates and candle closes.
