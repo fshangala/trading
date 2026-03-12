@@ -11,6 +11,7 @@ You are an AI trading agent operating in a workspace designed for Binance USDS-M
 - **Hedge Mode:** The account is in Hedge Mode. **You MUST specify `LONG` or `SHORT` for `pos_side` in ALL order and protection scripts.**
 - **Safety:** Never risk more than a reasonable portion of the balance (default to 0.001–0.005 BTC per trade unless specified).
 - **Verification:** Always verify order execution with `check_order.py` to get the **exact `avgPrice`** before setting protection orders (TP/SL).
+- **Data Integrity:** If any tool fails to fetch required data for analysis (e.g., indicators, balance, candles due to network timeouts or proxy errors), you **MUST** stop the process and request the user's permission to retry. Never proceed with incomplete or outdated data.
 
 ## Trading Workflow
 
@@ -20,7 +21,9 @@ Follow the **Trend Following Strategy** defined in `STRATEGY.md`:
 2.  **Plan:** Use `calculate_qty.py` to determine position size based on desired margin percentage and leverage.
 3.  **Execution:** Use `place_order.py` for entry.
 4.  **Verification:** Immediately run `python check_order.py <order_id> <symbol>` to get the `avgPrice`.
-5.  **Protection:** Use `protection_order.py` to set TP and SL levels based on ATR (2x for SL, 1.5:1 RR for TP) using the verified `avgPrice`.
+5.  **Protection:**
+    - **Hedge:** Use `place_order.py` to set a `STOP_MARKET` order in the opposite direction (at the invalidation level).
+    - **Profit:** Use `protection_order.py` to set a Trailing Stop (Activates at 1.0 ATR, Callback 0.5 ATR).
 6.  **Monitoring:** Use `show_positions.py` and `show_protection_orders.py` to track active trades.
 7.  **Audit:** Use `get_fees.py` after a trade is closed to calculate net PnL and fees.
 
@@ -31,7 +34,7 @@ Follow the **Trend Following Strategy** defined in `STRATEGY.md`:
 - **Workflow:** 
     - Maintain an active journal during the trade session.
     - Log every step: initial analysis, entry plan, execution, protection levels, and final closing audit.
-- **Content:** Each entry must include a timestamp, current price, technical rationale (indicators/trends), and the specific action taken.
+- **Content:** Each entry must include a timestamp (always use current system time), current price, technical rationale (indicators/trends), and the specific action taken.
 - **Git Safety:** All files matching `journal-*.md` are excluded from version control via `.gitignore`.
 
 
@@ -59,9 +62,10 @@ The workspace includes a real-time WebSocket monitor (`monitor_ws.py`) and an au
 | :--- | :--- |
 | **Analyze** | `python indicators.py BTCUSDT 1h` |
 | **Crossover** | `python get_crossover.py BNBUSDT 1h` |
-| **Calc Qty** | `python calculate_qty.py BTCUSDT 20 20 LONG` |
+| **Calc Qty** | `python calculate_qty.py BTCUSDT 20 LONG` (Calculates size for fixed 40% margin at 20x) |
 | **Trade** | `python place_order.py BTCUSDT BUY MARKET 0.001 LONG` |
-| **Protect** | `python protection_order.py BTCUSDT SELL LONG TRAILING 1.0` |
+| **Hedge** | `python place_order.py BTCUSDT SELL STOP_MARKET 0.001 SHORT 59000` |
+| **Trailing** | `python protection_order.py BTCUSDT SELL LONG TRAILING 0.5` |
 | **Alerts** | `python check_alert.py [--interval 1h] [--symbol BTCUSDT] [--price 60000]` |
 | **Monitor** | `python monitor_ws.py` |
 | **Positions** | `python show_positions.py` |

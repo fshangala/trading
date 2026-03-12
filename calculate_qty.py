@@ -41,15 +41,17 @@ def get_symbol_data(symbol):
         logging.error(f"Error fetching symbol data: {e}")
         return None
 
-def calculate_quantity_margin(symbol, margin_percent, leverage, pos_side):
+def calculate_quantity_fixed_margin(symbol, leverage, pos_side, margin_percent=40.0, hedge_atr_multiplier=0.5):
     """
-    Calculates the quantity to trade based on a percentage of the available margin and leverage.
+    Calculates the quantity to trade based on a fixed margin percentage of total equity.
+    Formula: Quantity = (Balance * Margin % * Leverage) / Current Price
 
     Parameters:
     - symbol (str): The trading pair symbol (e.g., 'BTCUSDT').
-    - margin_percent (float): The percentage of the wallet balance to use as margin (0-100).
-    - leverage (float): The leverage to apply to the margin.
+    - leverage (float): The leverage to apply (Capped at 20x).
     - pos_side (str): The position side ('LONG' or 'SHORT').
+    - margin_percent (float): The percentage of total equity to use as initial margin (default 40.0).
+    - hedge_atr_multiplier (float): The ATR multiplier for the Hedge distance (default 0.5).
 
     Returns:
     - float: The calculated quantity, or None if an error occurs.
@@ -62,7 +64,12 @@ def calculate_quantity_margin(symbol, margin_percent, leverage, pos_side):
     
     balance = balance_data["balance"]
     
-    # 2. Get Price and ATR (for strategy reference)
+    # 2. Safety Check: Max Leverage 20x
+    if leverage > 20:
+        logging.warning(f"Leverage {leverage}x exceeds 20x cap. Reducing to 20x.")
+        leverage = 20
+    
+    # 3. Get Price and ATR
     indicators = get_indicators(symbol, "15m")
     if not indicators:
         logging.error("Could not fetch indicators.")
@@ -71,48 +78,55 @@ def calculate_quantity_margin(symbol, margin_percent, leverage, pos_side):
     current_price = indicators["price"]
     atr = indicators["atr"]
     
-    # 3. Get Symbol Data
+    # 4. Get Symbol Data
     sym_data = get_symbol_data(symbol)
     if not sym_data: return
     precision = sym_data["precision"]
     min_qty = sym_data["min_qty"]
     
-    # 4. MARGIN-BASED CALCULATION
-    margin_to_use = balance * (margin_percent / 100)
-    notional_value = margin_to_use * leverage
-    raw_qty = notional_value / current_price
+    # 5. MARGIN-BASED CALCULATION
+    # Target Margin = Balance * (Margin % / 100)
+    target_margin = balance * (margin_percent / 100)
     
+    # Quantity = (Target Margin * Leverage) / Current Price
+    raw_qty = (target_margin * leverage) / current_price
+    
+    # 6. Rounding and Min Qty Check
     final_qty = round(raw_qty, precision)
     
     if final_qty < min_qty:
         logging.warning(f"Calculated quantity {final_qty} is below minimum {min_qty}.")
         final_qty = min_qty
 
-    # 5. ATR Stop Loss Calculation (For protection_order.py)
+    # 7. Hedge and Risk Analysis
+    hedge_distance = atr * hedge_atr_multiplier
     if pos_side.upper() == "LONG":
-        stop_loss = current_price - (2 * atr)
+        hedge_trigger_price = current_price - hedge_distance
     else:
-        stop_loss = current_price + (2 * atr)
-    sl_distance = abs(current_price - stop_loss)
-    
-    # 6. Risk Audit
-    est_loss = final_qty * sl_distance
+        hedge_trigger_price = current_price + hedge_distance
+        
+    actual_notional = final_qty * current_price
+    actual_margin = actual_notional / leverage
+    resulting_risk = final_qty * hedge_distance
 
     # Output Results
-    print(f"\n--- MARGIN-BASED POSITION SIZING: {symbol.upper()} ({pos_side.upper()}) ---")
+    print(f"\n--- FIXED-MARGIN POSITION SIZING: {symbol.upper()} ({pos_side.upper()}) ---")
     print(f"Wallet Balance:      {balance:.2f} USDT")
-    print(f"Margin Allocated:    {margin_percent}% ({margin_to_use:.2f} USDT)")
+    print(f"Allocation Target:   {margin_percent}% Margin ({target_margin:.2f} USDT)")
     print(f"Leverage:            {leverage}x")
     print(f"--------------------------------")
     print(f"Current Price:       {current_price:.4f}")
+    print(f"ATR (15m):           {atr:.4f}")
+    print(f"Hedge Distance:      {hedge_distance:.4f} ({hedge_atr_multiplier}x ATR)")
     print(f"--------------------------------")
     print(f"RECOMMENDED QTY:     {final_qty}")
-    print(f"NOTIONAL VALUE:      {final_qty * current_price:.2f} USDT")
+    print(f"NOTIONAL VALUE:      {actual_notional:.2f} USDT")
+    print(f"INITIAL MARGIN:      {actual_margin:.2f} USDT ({round((actual_margin/balance)*100, 2)}% of wallet)")
     print(f"--------------------------------")
-    print(f"STRATEGY GUIDANCE (ATR):")
-    print(f"ATR (15m):           {atr:.4f}")
-    print(f"Recommended SL:      {stop_loss:.4f} (2xATR)")
-    print(f"Risk if SL Hit:      {est_loss:.2f} USDT ({round((est_loss/balance)*100, 2)}% of wallet)")
+    print(f"STRATEGY GUIDANCE:")
+    print(f"Hedge Trigger:       {hedge_trigger_price:.4f}")
+    print(f"RESULTING RISK:      {resulting_risk:.2f} USDT ({round((resulting_risk/balance)*100, 2)}% of wallet)")
+    print(f"Hedge Multiplier:    {hedge_atr_multiplier}x ATR")
     print(f"Approx Liquidation:  ~{current_price * (1 - (1/leverage)) if pos_side.upper() == 'LONG' else current_price * (1 + (1/leverage)):.4f}")
     print(f"--------------------------------\n")
     
@@ -121,21 +135,23 @@ def calculate_quantity_margin(symbol, margin_percent, leverage, pos_side):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     
-    if len(sys.argv) < 5:
-        print("\n--- Position Size Calculator ---")
-        print("Usage: python calculate_qty.py <symbol> <margin_percent> <leverage> <pos_side:LONG|SHORT>\n")
+    if len(sys.argv) < 4:
+        print("\n--- Fixed-Margin Position Size Calculator ---")
+        print("Usage: python calculate_qty.py <symbol> <leverage> <pos_side:LONG|SHORT> [margin_percent] [atr_multiplier]\n")
         print("Arguments:")
         print("  <symbol>         : The symbol to trade (e.g. BTCUSDT)")
-        print("  <margin_percent> : Percentage of wallet balance to use (0-100)")
-        print("  <leverage>       : The leverage to use (e.g. 20)")
-        print("  <pos_side>       : LONG or SHORT\n")
+        print("  <leverage>       : The leverage to use (Capped at 20x)")
+        print("  <pos_side>       : LONG or SHORT")
+        print("  [margin_percent] : Optional: Percentage of wallet for initial margin (defaults to 40.0)")
+        print("  [atr_multiplier] : Optional: ATR multiplier for Hedge trigger (defaults to 0.5)\n")
         print("Example:")
-        print("  python calculate_qty.py BTCUSDT 20 20 LONG")
+        print("  python calculate_qty.py BTCUSDT 20 LONG")
         sys.exit(1)
         
     symbol = sys.argv[1]
-    margin_percent = float(sys.argv[2])
-    leverage = float(sys.argv[3])
-    pos_side = sys.argv[4]
+    leverage = float(sys.argv[2])
+    pos_side = sys.argv[3]
+    margin_percent = float(sys.argv[4]) if len(sys.argv) > 4 else 40.0
+    atr_multiplier = float(sys.argv[5]) if len(sys.argv) > 5 else 0.5
     
-    calculate_quantity_margin(symbol, margin_percent, leverage, pos_side)
+    calculate_quantity_fixed_margin(symbol, leverage, pos_side, margin_percent, atr_multiplier)

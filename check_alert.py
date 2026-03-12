@@ -17,7 +17,7 @@ import argparse
 from indicators import get_indicators
 from get_candles import get_candles
 from show_positions import show_positions
-from calculate_qty import calculate_quantity_margin
+from calculate_qty import calculate_quantity_fixed_margin
 import subprocess
 import winsound
 import ctypes
@@ -133,7 +133,7 @@ def execute_action(symbol, action, params, eval_context):
             margin_percent = params.get("margin_percent")
             leverage = params.get("leverage", 20)
             if margin_percent:
-                qty = calculate_quantity_margin(symbol, margin_percent, leverage, pos_side)
+                qty = calculate_quantity_fixed_margin(symbol, margin_percent, leverage, pos_side)
             
         if not qty:
             logging.error("Could not determine quantity.")

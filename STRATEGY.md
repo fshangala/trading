@@ -51,48 +51,67 @@ Operate across a hierarchical timeframe model to align macro bias with precision
   - **The Squeeze:** If BB bands are exceptionally tight/flat, **DO NOT ENTER.** This is a consolidation phase where EMAs are prone to whipsaws.
   - **Wait for Breakout:** Only enter when price breaks out of the BB squeeze with increasing volume (OBV) and widening bands.
 - **Trend Age (Crucial):** Identify the most recent **EMA 25/99 Cross** (Golden/Death Cross).
-  - **Early Trend:** Cross happened within the last 5-15 candles (High probability entry).
-  - **Mature Trend:** Cross happened 30+ candles ago (Higher risk of reversal; avoid chasing).
+  - **Early Trend (1-15 Candles):** High probability entry. Breakout/Momentum entries permitted.
+  - **Mid Trend (15-30 Candles):** Medium risk. ONLY enter on pullbacks to the **15m EMA 25**.
+  - **Mature Trend (>30 Candles):** High risk. ONLY enter on deep pullbacks to the **1h EMA 25** or **Daily VWAP**, or skip the trade entirely.
+  - **Exhaustion Filter (New):**
+    - **MACD Divergence:** If Price makes a Higher High but MACD Histogram makes a Lower High (Bearish Divergence) on 1h/15m, **DO NOT ENTER**.
+    - **RSI Overextension:** If RSI > 70 on 1h, wait for reset < 60 before considering long entries.
   - **Tool:** `python get_crossover.py <symbol> 1h`.
 
-### Step 2: Entry Setup (Pullback Protocol)
-Instead of entering immediately on a cross (which often "leads" to buying the top), wait for a pullback:
-- **LONG Entry:** Price pulls back to touch or hover near the **EMA 25** while EMA 25 > EMA 99.
-- **SHORT Entry:** Price rallies back to touch or hover near the **EMA 25** while EMA 25 < EMA 99.
-- **Validation:** RSI should be in the **40-60 range** (neutral) during the pullback, ensuring the trend isn't already exhausted.
+### Step 2: Entry Setup (Value Entry Protocol)
+Instead of entering immediately on a cross (which often "leads" to buying the top), wait for a "Value Entry":
+- **Trigger:** Price pulls back to the **15m EMA 25** or **1h EMA 25**.
+- **Validation:** RSI should be in the **40-50 range (for longs)** or **50-60 range (for shorts)** during the pullback.
+- **Momentum:** Enter on the **first** bullish/bearish 3m candle close (early signal) instead of waiting for full MACD acceleration.
 
-### Step 3: Momentum & Volatility Check (Tier 2/3)
-- **MACD Histogram:** Ensure the histogram matches the bias direction during the pullback recovery.
-- **Bollinger Bands:** Avoid entries if the pullback is so deep it touches the opposite band (possible trend reversal). Ideally, the pullback stays within the Middle Band (SMA 20).
-
-### Step 3: Volume Confirmation
-- **OBV:** Should be trending in the same direction as the price.
-- **VWAP:** Price above VWAP supports longs; price below VWAP supports shorts.
+### Step 3: Market Correlation & Funding Check
+- **BTC Rule:** For ANY trade, **BTCUSDT** must not be in a direct momentum conflict. (e.g., Don't long BNB if BTC is breaking down through its 1h EMA 25).
+- **Funding Check:** Avoid opening new positions if the **Funding Rate** is extreme (e.g., >0.03% for longs) to avoid "liquidation flushes."
 
 ## 3. Execution Rules
 
 ### Position Sizing (Margin-Based Model)
-To maintain consistent capital allocation, calculate the quantity based on the percentage of your wallet you wish to commit as margin:
-- **Margin Allocation:** **10-20%** of total wallet balance per trade.
-- **Leverage:** Use **10x to 20x** depending on volatility.
-- **Tool:** `python calculate_qty.py <symbol> <margin_percent> <leverage> <pos_side:LONG|SHORT>`.
-- **Goal:** Control exactly how much capital (margin) is tied up in each trade.
+To protect capital while maintaining aggressive exposure, position sizing is based on **Fixed Margin Allocation**.
+- **Initial Margin:** Always use **40%** of Total Wallet Balance for the primary position.
+- **Formula:** `Quantity = (Wallet Balance * 0.40 * Leverage) / Current Price`
+- **Safety Caps (Mandatory):**
+  - **Max Leverage:** Strictly **20x**.
+  - **Total Margin Cap:** Primary (40%) + Hedge (40%) = **80%** total margin usage when locked.
+- **Logic:** This model allocates a significant portion of the wallet to the trade immediately. The "Risk if Hedge is Hit" (Quantity * 0.5 ATR) is dynamic and must be noted upon entry. This model assumes the user is confident in the setup and prepared for the management required in a "Locked" state.
+- **Tool:** `python calculate_qty.py <symbol> <leverage> <pos_side:LONG|SHORT> [margin_percent:40.0]`.
 
 ### Entry (SHORT Example)
-1. **Trend:** 1h Death Cross confirmed. 15m EMA 7 < 25.
+1. **Trend:** 1h Death Cross confirmed (< 30 candles old). 15m EMA 7 < 25.
 2. **Setup:** Price rallies to the 15m EMA 25 or Middle Bollinger Band.
-3. **Trigger:** Bearish rejection (RSI starts falling from 50-60 level, MACD histogram shrinks).
-4. **Execution:** Run `calculate_qty.py` to get recommended quantity, then `python place_order.py <symbol> SELL MARKET <qty> SHORT`.
+3. **Trigger:** Bearish rejection (RSI starts falling from 50-60 level).
+4. **Execution:** Run `calculate_qty.py` to get risk-based quantity, then `python place_order.py <symbol> SELL MARKET <qty> SHORT`.
 
-### Risk Management (ATR-Based)
-- **Stop Loss (SL):** Place SL at `Entry + (2 * ATR)` for shorts, or `Entry - (2 * ATR)` for longs. Use the ATR from the entry timeframe (e.g., 15m).
-- **Take Profit (TP):** Aim for a minimum **1.5:1** Risk/Reward ratio relative to the SL distance.
-  - *Example:* If SL distance is 100 points, TP should be at 150 points from entry.
-- **Trailing Stop (Volatility-Based):** 
-  - **Activation:** Once the price reaches a profit of **1.5 * ATR (15m)**.
-  - **Callback Rate:** Set the trailing callback to **1.0 * ATR (15m)** expressed as a percentage of the current price, or a minimum of **1%** to avoid premature exit from minor noise.
-  - **Logic:** This ensures the "breathing room" for the trade scales with the asset's current volatility.
+### Risk Management (Hedge Protection)
+- **Hedge Order (The "Stop Loss"):** Instead of closing the position, place a **STOP_MARKET** entry order in the opposite direction.
+  - **Trigger:** Set at **Entry +/- 0.5 * ATR**. (Tight hedge to limit initial drawdown).
+  - **Quantity:** Equal to the initial position size (`1:1 Hedge`).
+  - **Mutual Cancellation (OCO):**
+    - If the **Trailing Stop** (Profit) triggers first, **CANCEL** the Hedge Order.
+    - If the **Hedge Order** (Loss) triggers first, **CANCEL** the Trailing Stop (to prevent naked exposure).
+  - **Tool:** `python place_order.py <symbol> <OPPOSITE_SIDE> STOP_MARKET <qty> <OPPOSITE_POS_SIDE> <trigger_price>`
+
+- **Hard Take Profit (TP):** Set at **2.0 * ATR** from entry.
+
+- **Trailing Stop (Scalping Mode):**
+  - **Activation:** Once the price reaches a profit of **1.0 * ATR** (approx 0.5% move).
+  - **Callback Rate:** **0.5 * ATR** (Tight trailing to lock in scalp profits).
+  - **Logic:** Secure profits early in volatile markets. If the trend is strong, this captures the "meat" of the move without risking a full reversal.
 - **Tool:** `python protection_order.py <symbol> <side> <pos_side> TRAILING <callback_percentage>`.
+
+### Hedge Unwind Protocol (Recovery)
+When the Hedge is active (Locked Position) and price tests a major support/resistance and holds (rebound):
+1.  **Close Hedge:** Market Close the **Winning Leg** (e.g., Short) to realize the profit.
+2.  **Protect Primary:** Immediately set a **Stop Loss** on the **Primary Leg** (e.g., Long) at the **Price where the Hedge was closed**.
+    - *Purpose:* Prevents the loss from exceeding the "Locked" amount if the rebound fails.
+3.  **Trail Primary:** Set a **Trailing Stop** on the Primary Leg with **Activation: 0.5 * ATR** (from current price) and **Callback: 0.5 * ATR**.
+4.  **Cleanup:** Monitor the Trailing Stop. Once the Trailing Stop's trigger price moves past the fixed Stop Loss (better exit), **CANCEL** the fixed Stop Loss to let the Trailing Stop manage the trade.
+
 
 ## 4. Monitoring & Audit
 - Use `monitor.py` with `alerts.json` to automate TP/SL and breakout notifications.

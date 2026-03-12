@@ -23,8 +23,35 @@ PYTHON_EXE = os.path.join("env", "Scripts", "python.exe")
 
 # Global state for throttling and execution control
 last_realtime_check = 0
+last_hedge_check = 0
 REALTIME_CHECK_THROTTLE = 1.0  # Seconds between price/position alert checks
+HEDGE_CHECK_THROTTLE = 5.0     # Seconds between hedge checks (API intensive)
 alert_lock = threading.Lock()
+
+def check_hedge_mode(symbol):
+    """
+    Checks if a symbol is in 'Hedge Mode' (Both LONG and SHORT positions active).
+    If true, it cancels ALL open orders (specifically the Trailing Stop) to prevent
+    'naked' exposure if price reverses.
+    """
+    try:
+        client = get_client()
+        positions = client.rest_api.account_information(recv_window=10000).data()['positions']
+        
+        long_pos = next((p for p in positions if p['symbol'] == symbol and p['positionSide'] == 'LONG'), None)
+        short_pos = next((p for p in positions if p['symbol'] == symbol and p['positionSide'] == 'SHORT'), None)
+        
+        if long_pos and short_pos:
+            long_amt = float(long_pos['positionAmt'])
+            short_amt = float(short_pos['positionAmt'])
+            
+            if abs(long_amt) > 0 and abs(short_amt) > 0:
+                logging.warning(f"HEDGE DETECTED on {symbol}! Cancelling ALL open orders to remove Trailing Stop.")
+                client.rest_api.cancel_all_orders(symbol=symbol, recv_window=10000)
+                logging.info(f"All orders cancelled for {symbol}. Manual unwind required.")
+                
+    except Exception as e:
+        logging.error(f"Error checking hedge mode for {symbol}: {e}")
 
 def run_alert_check(interval=None, symbol=None, price=None):
     """Runs evaluate_alerts with a lock to ensure single-instance execution."""
@@ -46,12 +73,14 @@ def on_message(data):
     1. Extracts symbol, interval, price, and candle close status from the message.
     2. Real-time Check: If the message is from a '1m' stream, it triggers 'evaluate_alerts' 
        without an interval (real-time alerts) every REALTIME_CHECK_THROTTLE seconds.
-    3. Interval Check: If 'k_closed' is true, it triggers 'evaluate_alerts' with the 
+    3. Hedge Check: Periodically checks if the symbol has entered a 'Locked' hedge state 
+       and cancels open orders if so.
+    4. Interval Check: If 'k_closed' is true, it triggers 'evaluate_alerts' with the 
        specific interval of the candle that just closed.
     
     Optimization: Calls logic directly in a thread to avoid process-spawning overhead.
     """
-    global last_realtime_check
+    global last_realtime_check, last_hedge_check
     try:
         msg_data = data.get("data", {})
         symbol = msg_data.get("s")
@@ -68,9 +97,15 @@ def on_message(data):
 
         # 1. Throttled check for "no-interval" alerts (Price/Position only)
         # Only trigger from the 1m stream (or whatever is the fastest) to avoid duplicates if multiple streams are open
-        if interval == "1m" and current_time - last_realtime_check >= REALTIME_CHECK_THROTTLE:
-            threading.Thread(target=run_alert_check, args=(None, symbol, float(price)), daemon=True).start()
-            last_realtime_check = current_time
+        if interval == "1m":
+            if current_time - last_realtime_check >= REALTIME_CHECK_THROTTLE:
+                threading.Thread(target=run_alert_check, args=(None, symbol, float(price)), daemon=True).start()
+                last_realtime_check = current_time
+            
+            # Check for Hedge Activation (throttled to avoid API limits)
+            if current_time - last_hedge_check >= HEDGE_CHECK_THROTTLE:
+                 threading.Thread(target=check_hedge_mode, args=(symbol,), daemon=True).start()
+                 last_hedge_check = current_time
 
         # 2. Trigger interval-specific checks only when a candle CLOSES
         if k_closed:
