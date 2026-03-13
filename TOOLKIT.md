@@ -77,18 +77,18 @@ The toolkit includes a real-time WebSocket monitoring system (`monitor_ws.py`) a
 The `alerts.json` file contains a list of alert objects:
 - `id`: Unique identifier (used as the notification title).
 - `symbol`: The trading pair (e.g., `BTCUSDT`).
-- `condition`: A Python-evaluable string (e.g., `price < 60000`, `price >= bollinger_upper`, `rsi > 70`, `pos_amt == 0`).
+- `condition`: A Python-evaluable string. 
+    - **Available Variables:** `price`, `pos_amt` (Net absolute exposure), `pos_amt_long`, `pos_amt_short`, `ema7`, `ema25`, `ema99`, `rsi`, `atr`, `vwap`, `obv`, `macd_hist`, `trend_bias`, `bollinger_upper`, `bollinger_middle`, `bollinger_lower`.
 - `description`: Short text describing the alert (used as the notification body).
-- `interval`: (Optional) The timeframe for indicators. Set to `null` or omit for real-time price/position checks.
-- `action`: Action to take (`open_long`, `open_short`, `notify`).
-- `action_params`: Parameters for the action (e.g., `{"margin_percent": 10, "type": "alarm"}`).
-- `disables`: (Optional) A list of other alert IDs to deactivate when this alert triggers.
-- `active`: Boolean to enable/disable the alert.
 
 ### Optimization & Reliability
-- **WebSocket Efficiency:** `monitor_ws.py` subscribes to the `1m` stream for all real-time alerts (`interval: null`) to ensure high-frequency updates.
-- **Redundant API Calls:** `monitor_ws.py` passes the latest `price` and `symbol` directly to `check_alert.py`, which skips the API price fetch if these arguments are provided.
-- **Race Condition Handling:** Both scripts use a retry-based file loading/saving mechanism for `alerts.json` to prevent corruption during simultaneous access (common on Windows).
+- **WebSocket Efficiency:** `monitor_ws.py` uses per-stream `on_message` subscriptions to minimize overhead.
+- **Delta-Based Subscriptions:** When `alerts.json` changes, the monitor only subscribes/unsubscribes to the difference, avoiding unnecessary connection churn.
+- **Per-Symbol Throttling:** Throttling timers are maintained independently for each symbol to prevent cross-interference in multi-symbol monitoring.
+- **Position State Tracking:** Maintains a state machine (`NONE`, `LONG`, `SHORT`, `HEDGE`) for active symbols. 
+    - **Proactive Triggers:** Transitions (e.g., `LONG -> NONE`) trigger an **immediate** alert evaluation.
+    - **Hedge Safety:** Upon `HEDGE` detection, the monitor automatically cancels all open orders for the symbol.
+- **Health & Recovery:** A background `connection_health_check` monitors for silence/timeouts and triggers a graceful shutdown and notify on failure.
 
 ### Execution
 1. **WebSocket Monitor:** Run `python monitor_ws.py` in the background. It subscribes to streams for all active alerts.

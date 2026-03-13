@@ -34,7 +34,7 @@ Follow the **Trend Following Strategy** defined in `STRATEGY.md`:
 - **Workflow:** 
     - Maintain an active journal in the `journals/` directory during the trade session.
     - Log every step: initial analysis, entry plan, execution, protection levels, and final closing audit.
-- **Content:** Each entry must include a timestamp (always use current system time), current price, technical rationale (indicators/trends), and the specific action taken.
+- **Content:** Each entry must include a timestamp (always use current system time), current price, and technical rationale. **Crucially, do not just list stats; provide a narrative description of what is happening in the market based on those stats and explicitly state what has been decided (e.g., wait, enter, or skip).**
 - **Git Safety:** The `journals/` directory is excluded from version control via `.gitignore`.
 
 
@@ -43,12 +43,12 @@ Follow the **Trend Following Strategy** defined in `STRATEGY.md`:
 The workspace includes a real-time WebSocket monitor (`monitor_ws.py`) and an automated alert checker (`check_alert.py`).
 
 - **Configuring Alerts:** Add or modify alerts in `alerts.json`.
-    - `condition`: Use Python-style logic. Available variables: `price`, `pos_amt`, `ema7`, `ema25`, `ema99`, `rsi`, `atr`, `vwap`, `obv`, `macd_hist`, `trend_bias`, `bollinger_upper`, `bollinger_middle`, `bollinger_lower`.
+    - `condition`: Use Python-style logic. Available variables: `price`, `pos_amt` (Net absolute exposure), `pos_amt_long`, `pos_amt_short`, `ema7`, `ema25`, `ema99`, `rsi`, `atr`, `vwap`, `obv`, `macd_hist`, `trend_bias`, `bollinger_upper`, `bollinger_middle`, `bollinger_lower`.
     - `interval`: (Optional) The timeframe for indicators. Set to `null` or omit for real-time price checks.
-    - `action`: `open_long`, `open_short`, or `notify`.
-    - `action_params`: Arguments like `qty`, `margin_percent`, `leverage`, `use_atr`, etc. Set `type: "alarm"` for critical alerts.
-    - `description`: A short text displayed in the message body when the alert triggers.
-    - `disables`: (Optional) List of alert IDs to deactivate when this alert triggers.
+- **Automated Monitoring & Safety:**
+  - `monitor_ws.py` tracks position states (`NONE`, `LONG`, `SHORT`, `HEDGE`).
+  - **Immediate Triggers:** Detects position closures (`NONE`) or hedge activations (`HEDGE`) and triggers `check_alert.py` immediately.
+  - **Hedge Safety:** Automatically cancels all open orders for a symbol upon `HEDGE` detection to prevent unintended execution of protection orders.
 - **Notification Logic:** 
   - **Title:** The `id` of the alert is used as the notification title.
   - **Body:** The `description` is used as the message body.
@@ -56,8 +56,9 @@ The workspace includes a real-time WebSocket monitor (`monitor_ws.py`) and an au
 - **Running the Monitor:** 
   - Start monitor: `.\env\Scripts\python.exe monitor_ws.py`
   - The monitor subscribes to active symbols and triggers `check_alert.py` on price updates and candle closes.
-- **Optimization:**
-  - `monitor_ws.py` uses the `1m` stream for real-time alerts.
+- **Optimization & Health:**
+  - `monitor_ws.py` uses independent per-symbol throttling timers and delta-based subscriptions.
+  - A background health check ensures the connection is alive (using proactive pings and timeout detection).
   - `check_alert.py` supports `--symbol` and `--price` arguments to skip redundant API calls.
   - Both scripts use retry-logic when accessing `alerts.json` to handle file-access conflicts.
 

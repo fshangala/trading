@@ -1,7 +1,22 @@
+"""
+Binance Futures WebSocket Monitor
+
+This script provides real-time monitoring of Binance USDS-M Futures markets using WebSockets.
+It integrates with 'alerts.json' to trigger automated notifications or actions based on 
+price movements, technical indicators, and position state changes.
+
+Monitoring Philosophy:
+- High-frequency message handling via per-stream 'on_message' subscriptions.
+- Proactive connection health monitoring (pings/timeouts) via background asyncio tasks.
+- Graceful shutdown and recovery managed through exception handling and asyncio events.
+
+Usage:
+    .\\env\\Scripts\\python.exe monitor_ws.py
+"""
+
 import os
 import json
 import logging
-import subprocess
 import asyncio
 import hashlib
 import time
@@ -9,32 +24,45 @@ import threading
 from config import get_client
 from check_alert import evaluate_alerts, notify
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("monitor_ws.log"),
-        logging.StreamHandler()
-    ]
-)
-
-PYTHON_EXE = os.path.join("env", "Scripts", "python.exe")
-
 # Global state for throttling and execution control
-last_realtime_check = 0
-last_hedge_check = 0
+last_realtime_checks = {}  # format: { symbol: timestamp }
+last_hedge_checks = {}     # format: { symbol: timestamp }
 last_msg_time = time.time()
 REALTIME_CHECK_THROTTLE = 1.0  # Seconds between price/position alert checks
 HEDGE_CHECK_THROTTLE = 5.0     # Seconds between hedge checks (API intensive)
 alert_lock = threading.Lock()
 
-def check_hedge_mode(symbol):
+# Event used to signal a graceful shutdown from callbacks or tasks
+shutdown_event = None
+main_loop = None
+
+# Tracking position states to detect closures/changes
+# format: { symbol: { 'LONG': amt, 'SHORT': amt, 'state': 'NONE|LONG|SHORT|HEDGE' } }
+pos_tracker = {}
+
+def trigger_shutdown(reason):
     """
-    Checks if a symbol is in 'Hedge Mode' (Both LONG and SHORT positions active).
-    If true, it cancels ALL open orders (specifically the Trailing Stop) to prevent
-    'naked' exposure if price reverses.
+    Signals the main loop to shut down gracefully.
+
+    Args:
+        reason (str): The reason for triggering the shutdown (logged for audit).
     """
+    global shutdown_event, main_loop
+    logging.critical(f"Shutdown triggered: {reason}")
+    if shutdown_event and main_loop:
+        main_loop.call_soon_threadsafe(shutdown_event.set)
+
+def check_position_state(symbol):
+    """
+    Fetches the current position state from the API and detects transitions.
+    
+    Identifies state changes (e.g., closure or hedge activation) and triggers 
+    priority alert checks or safety actions (like cancelling orders).
+
+    Args:
+        symbol (str): The trading pair symbol to check.
+    """
+    global pos_tracker
     try:
         client = get_client()
         response = client.rest_api.position_information_v2(symbol=symbol, recv_window=10000)
@@ -43,22 +71,45 @@ def check_hedge_mode(symbol):
         long_pos = next((p for p in positions if (p.get('positionSide') if isinstance(p, dict) else p.position_side) == 'LONG'), None)
         short_pos = next((p for p in positions if (p.get('positionSide') if isinstance(p, dict) else p.position_side) == 'SHORT'), None)
         
-        if long_pos and short_pos:
-            long_amt = float(long_pos.get('positionAmt') if isinstance(long_pos, dict) else long_pos.position_amt)
-            short_amt = float(short_pos.get('positionAmt') if isinstance(short_pos, dict) else short_pos.position_amt)
+        long_amt = float(long_pos.get('positionAmt') if isinstance(long_pos, dict) else long_pos.position_amt) if long_pos else 0.0
+        short_amt = float(short_pos.get('positionAmt') if isinstance(short_pos, dict) else short_pos.position_amt) if short_pos else 0.0
+        
+        current_state = 'NONE'
+        if abs(long_amt) > 0 and abs(short_amt) > 0: current_state = 'HEDGE'
+        elif abs(long_amt) > 0: current_state = 'LONG'
+        elif abs(short_amt) > 0: current_state = 'SHORT'
+        
+        prev_data = pos_tracker.get(symbol, {'state': 'UNKNOWN', 'LONG': 0.0, 'SHORT': 0.0})
+        prev_state = prev_data['state']
+        
+        if current_state != prev_state and prev_state != 'UNKNOWN':
+            logging.info(f"POSITION CHANGE on {symbol}: {prev_state} -> {current_state}")
             
-            if abs(long_amt) > 0 and abs(short_amt) > 0:
+            if current_state == 'NONE':
+                logging.info(f"Position CLOSED on {symbol}. Triggering priority alert check.")
+                threading.Thread(target=run_alert_check, args=(None, symbol, None), daemon=True).start()
+            
+            if current_state == 'HEDGE':
                 logging.warning(f"HEDGE DETECTED on {symbol}! Cancelling ALL open orders to remove Trailing Stop.")
                 client.rest_api.cancel_all_orders(symbol=symbol, recv_window=10000)
                 logging.info(f"All orders cancelled for {symbol}. Manual unwind required.")
+                threading.Thread(target=run_alert_check, args=(None, symbol, None), daemon=True).start()
+
+        pos_tracker[symbol] = {'state': current_state, 'LONG': long_amt, 'SHORT': short_amt}
                 
     except Exception as e:
-        logging.error(f"Error checking hedge mode for {symbol}: {e}")
+        logging.error(f"Error checking position state for {symbol}: {e}")
 
 def run_alert_check(interval=None, symbol=None, price=None):
-    """Runs evaluate_alerts with a lock to ensure single-instance execution."""
+    """
+    Executes the alert evaluation logic within a thread-safe lock.
+
+    Args:
+        interval (str, optional): The timeframe of the candle that triggered the check.
+        symbol (str, optional): The symbol that received an update.
+        price (float, optional): The latest price from the WebSocket message.
+    """
     if alert_lock.locked():
-        # logging.debug("Alert check already in progress. Skipping.")
         return
     
     with alert_lock:
@@ -67,31 +118,31 @@ def run_alert_check(interval=None, symbol=None, price=None):
         except Exception as e:
             logging.error(f"Error in evaluate_alerts thread: {e}")
 
-def on_close():
-    """Handles WebSocket disconnection by exiting the script."""
-    logging.critical("WebSocket connection closed. Exiting monitor.")
-    notify("MONITOR CLOSED", "WebSocket connection was closed. Monitor stopped.", notify_type="notify")
-    os._exit(1)
-
-def on_error(error):
-    """Handles WebSocket errors by exiting the script."""
-    logging.critical(f"WebSocket error: {error}. Exiting monitor.")
-    notify("MONITOR ERROR", f"WebSocket error: {error}. Monitor stopped.", notify_type="notify")
-    os._exit(1)
-
 def on_message(data):
     """
     Handles incoming WebSocket messages from the Binance stream.
+    
+    Routes data to throttled real-time checks or interval-based checks 
+    (on candle close).
+
+    Args:
+        data (str|dict): The raw message data from the WebSocket.
     """
-    global last_msg_time, last_realtime_check, last_hedge_check
+    global last_msg_time, last_realtime_checks, last_hedge_checks
     last_msg_time = time.time()
     try:
-        msg_data = data.get("data", {})
+        if isinstance(data, str):
+            try:
+                data = json.loads(data)
+            except json.JSONDecodeError:
+                return
+
+        msg_data = data.get("data", data) if isinstance(data, dict) else {}
         symbol = msg_data.get("s")
+        if not symbol: return
+
         k = msg_data.get("k", {})
-        
-        if not k:
-            return
+        if not k: return
 
         interval = k.get("i")
         price = k.get("c")
@@ -99,19 +150,17 @@ def on_message(data):
 
         current_time = time.time()
 
-        # 1. Throttled check for "no-interval" alerts (Price/Position only)
-        # Only trigger from the 1m stream (or whatever is the fastest) to avoid duplicates if multiple streams are open
         if interval == "1m":
-            if current_time - last_realtime_check >= REALTIME_CHECK_THROTTLE:
+            last_rc = last_realtime_checks.get(symbol, 0)
+            if current_time - last_rc >= REALTIME_CHECK_THROTTLE:
+                last_realtime_checks[symbol] = current_time
                 threading.Thread(target=run_alert_check, args=(None, symbol, float(price)), daemon=True).start()
-                last_realtime_check = current_time
             
-            # Check for Hedge Activation (throttled to avoid API limits)
-            if current_time - last_hedge_check >= HEDGE_CHECK_THROTTLE:
-                 threading.Thread(target=check_hedge_mode, args=(symbol,), daemon=True).start()
-                 last_hedge_check = current_time
+            last_hc = last_hedge_checks.get(symbol, 0)
+            if current_time - last_hc >= HEDGE_CHECK_THROTTLE:
+                 last_hedge_checks[symbol] = current_time
+                 threading.Thread(target=check_position_state, args=(symbol,), daemon=True).start()
 
-        # 2. Trigger interval-specific checks only when a candle CLOSES
         if k_closed:
             logging.info(f"CANDLE CLOSED: {symbol} {interval} at price {price}. Triggering interval check.")
             threading.Thread(target=run_alert_check, args=(interval, symbol, float(price)), daemon=True).start()
@@ -121,8 +170,15 @@ def on_message(data):
 
 def load_alerts(filepath="alerts.json", retries=5, delay=0.1):
     """
-    Loads alerts from a JSON file with a retry mechanism to handle file-in-use 
-    errors (race conditions) common on Windows when multiple processes access the file.
+    Loads alerts from a JSON file with a retry mechanism.
+
+    Args:
+        filepath (str): Path to the JSON file.
+        retries (int): Number of attempts.
+        delay (float): Seconds between attempts.
+
+    Returns:
+        list: The list of alert objects.
     """
     for i in range(retries):
         try:
@@ -134,29 +190,34 @@ def load_alerts(filepath="alerts.json", retries=5, delay=0.1):
             if i < retries - 1:
                 time.sleep(delay)
                 continue
-            logging.error(f"Error loading {filepath} after {retries} attempts: {e}")
     return []
 
 def get_alert_streams():
     """
-    Parses 'alerts.json' and generates a list of unique WebSocket stream strings 
-    (e.g., 'btcusdt@kline_1m') for all active alerts.
-    
-    Defaulting: Alerts with no interval specified (null) default to '1m' to 
-    ensure high-frequency price monitoring.
+    Parses 'alerts.json' to generate a list of unique WebSocket stream strings.
+
+    Returns:
+        list: A list of streams (e.g., ['btcusdt@kline_1m']).
     """
     alerts = load_alerts()
     active_streams = set()
     for a in alerts:
         if a.get("active", False):
             symbol = a.get("symbol").lower()
-            # Default to 1m for real-time (null) alerts to ensure fast updates
             interval = a.get("interval") or "1m"
             active_streams.add(f"{symbol}@kline_{interval}")
     return list(active_streams)
 
 def get_file_hash(filepath):
-    """Calculates the MD5 hash of a file to detect changes in content."""
+    """
+    Calculates the MD5 hash of a file to detect content changes.
+
+    Args:
+        filepath (str): Path to the file.
+
+    Returns:
+        str|None: The hex digest of the hash.
+    """
     if not os.path.exists(filepath):
         return None
     with open(filepath, "rb") as f:
@@ -165,42 +226,42 @@ def get_file_hash(filepath):
 async def watch_alerts(client, current_streams, current_hash):
     """
     Background task that monitors 'alerts.json' for changes.
-    If the file hash changes, it automatically unsubscribes from old streams 
-    and subscribes to the updated list of active alert streams.
+
+    Args:
+        client (Client): The Binance SDK client.
+        current_streams (list): The currently active list of streams.
+        current_hash (str): The current hash of alerts.json.
     """
     while True:
-        await asyncio.sleep(10) # Check every 10 seconds
+        await asyncio.sleep(10)
         new_hash = get_file_hash("alerts.json")
         
         if new_hash != current_hash:
             logging.info("Change detected in alerts.json. Updating subscriptions...")
             new_streams = get_alert_streams()
             
-            if not new_streams:
-                logging.info("No active alerts found. Unsubscribing from all.")
-                if current_streams:
-                    await client.websocket_streams.unsubscribe(current_streams)
-                current_streams = []
-            else:
-                # Unsubscribe from old, subscribe to new
-                if current_streams:
-                    await client.websocket_streams.unsubscribe(current_streams)
-                
-                await client.websocket_streams.subscribe(new_streams)
-                
-                # Bind message handler to new streams
-                for stream in new_streams:
-                    client.websocket_streams.on("message", on_message, stream)
-                    
-                logging.info(f"Updated subscriptions: {new_streams}")
-                current_streams = new_streams
+            to_unsubscribe = list(set(current_streams) - set(new_streams))
+            to_subscribe = list(set(new_streams) - set(current_streams))
             
+            if to_unsubscribe:
+                logging.info(f"Unsubscribing from old streams: {to_unsubscribe}")
+                await client.websocket_streams.unsubscribe(to_unsubscribe)
+            
+            if to_subscribe:
+                logging.info(f"Subscribing to new streams: {to_subscribe}")
+                await client.websocket_streams.subscribe(to_subscribe)
+                for stream in to_subscribe:
+                    client.websocket_streams.on("message", on_message, stream)
+            
+            current_streams = new_streams
             current_hash = new_hash
 
 async def connection_health_check(client):
     """
     Periodically checks if the WebSocket connection is still active.
-    Exits the script if the connection is closed or unresponsive.
+
+    Args:
+        client (Client): The Binance SDK client.
     """
     global last_msg_time
     while True:
@@ -208,79 +269,60 @@ async def connection_health_check(client):
         current_time = time.time()
         
         if not hasattr(client, 'websocket_streams') or not client.websocket_streams.connections:
-            # If we expect to be running but have no connections, check if it's been too long
             active_streams = get_alert_streams()
             if active_streams and current_time - last_msg_time > 60:
-                logging.critical("No WebSocket connections found despite active alerts. Exiting.")
-                notify("MONITOR FAILURE", "WebSocket connection lost. Monitor stopped.", notify_type="notify")
-                os._exit(1)
+                trigger_shutdown("No WebSocket connections found despite active alerts.")
+                return
             continue
         
-        # Check for explicitly closed connections
-        for conn in client.websocket_streams.connections:
-            if conn.websocket.closed:
-                logging.critical(f"WebSocket connection {conn.id} is closed. Exiting.")
-                notify("MONITOR CLOSED", "WebSocket connection was closed. Monitor stopped.", notify_type="notify")
-                os._exit(1)
-        
-        # Unresponsiveness Check: If we have active streams but no messages
         active_streams = get_alert_streams()
         if active_streams:
             silence_duration = current_time - last_msg_time
-            
-            # If silent for 30s, try a proactive ping
             if silence_duration > 30:
                 try:
                     for conn in client.websocket_streams.connections:
                         await client.websocket_streams.ping_server(conn)
-                    logging.debug("Proactive ping sent due to silence.")
                 except Exception as e:
-                    logging.critical(f"Ping failed: {e}. Connection is likely dead.")
-                    notify("MONITOR TIMEOUT", "WebSocket connection unresponsive. Monitor stopped.", notify_type="notify")
-                    os._exit(1)
+                    trigger_shutdown(f"Ping failed: {e}. Connection is likely dead.")
+                    return
             
-            # If silent for 60s, assume dead regardless of ping (Binance kline streams are very chatty)
             if silence_duration > 60:
-                logging.critical("WebSocket unresponsiveness (60s silence). Exiting.")
-                notify("MONITOR TIMEOUT", "WebSocket connection timed out. Monitor stopped.", notify_type="notify")
-                os._exit(1)
+                trigger_shutdown("WebSocket unresponsiveness (60s silence).")
+                return
 
 async def main():
     """
     Main entry point for the WebSocket Monitor.
-    - Initializes the Binance client and WebSocket connection.
-    - Subscribes to initial streams from 'alerts.json'.
-    - Starts the background 'watch_alerts' and 'connection_health_check' tasks.
     """
+    global shutdown_event, main_loop
+    
     client = get_client()
+    main_loop = asyncio.get_event_loop()
+    shutdown_event = asyncio.Event()
     
     current_hash = get_file_hash("alerts.json")
     current_streams = get_alert_streams()
 
-    # Define tasks for finally block access
     watcher = None
     health_check = None
 
     try:
-        # Always create connection to allow for dynamic subscription updates
         await client.websocket_streams.create_connection()
         
-        if not current_streams:
-            logging.info("No active alerts found in alerts.json. Waiting for changes...")
-        else:
+        if current_streams:
             logging.info(f"Initial subscription: {current_streams}")
             await client.websocket_streams.subscribe(current_streams)
-            
-            # Bind message handler to EACH stream
             for stream in current_streams:
                 client.websocket_streams.on("message", on_message, stream)
+        else:
+            logging.info("No active alerts found. Waiting for changes...")
 
-        # Start background tasks
         watcher = asyncio.create_task(watch_alerts(client, current_streams, current_hash))
         health_check = asyncio.create_task(connection_health_check(client))
 
         logging.info("WebSocket Monitor Started. Press Ctrl+C to stop.")
-        await asyncio.Future()
+        await shutdown_event.wait()
+        
     except asyncio.CancelledError:
         pass
     finally:
@@ -288,22 +330,24 @@ async def main():
         if watcher: watcher.cancel()
         if health_check: health_check.cancel()
         
-        try:
-            if watcher: await watcher
-            if health_check: await health_check
-        except asyncio.CancelledError:
-            pass
-        
-        # Properly close the WebSocket connection
         if hasattr(client, 'websocket_streams'):
             await client.websocket_streams.close_connection()
             logging.info("WebSocket connection closed.")
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler("monitor_ws.log"),
+            logging.StreamHandler()
+        ]
+    )
+
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        pass # main()'s finally block handles the cleanup
+        pass
     except Exception as e:
         logging.critical(f"Monitor crashed: {e}")
         notify("MONITOR CRASHED", f"Monitor exited unexpectedly: {e}", notify_type="notify")

@@ -118,3 +118,7 @@ When the Hedge is active (Locked Position) and price tests a major support/resis
 ## 4. Monitoring & Audit
 - Use `monitor.py` with `alerts.json` to automate TP/SL and breakout notifications.
 - Use `get_fees.py` after every trade to audit net PnL (including maker/taker commissions).
+- **Mandatory Trade Journaling:** 
+    - Maintain a journal for every trade in `journals/`.
+    - **Do not just log stats.** Provide a narrative description of what is happening in the market based on the indicators (e.g., "The price is pulling back to the 15m EMA 25 while macro trend is bullish").
+    - **Explicit Decisions:** Clearly state what has been decided based on the analysis (e.g., "Waiting for a 3m Golden Cross before entry").
