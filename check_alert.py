@@ -365,9 +365,9 @@ def evaluate_alerts(target_interval=None, ws_symbol=None, ws_price=None):
                     "vwap": base_data.get("vwap"),
                     "obv": base_data.get("obv"),
                     "macd_hist": base_data.get("macd")[2] if base_data.get("macd") else None,
-                    "bollinger_upper": base_data.get("bollinger", {}).get("upper"),
-                    "bollinger_middle": base_data.get("bollinger", {}).get("middle"),
-                    "bollinger_lower": base_data.get("bollinger", {}).get("lower"),
+                    "bollinger_upper": base_data.get("bb")[0] if base_data.get("bb") else None,
+                    "bollinger_middle": base_data.get("bb")[1] if base_data.get("bb") else None,
+                    "bollinger_lower": base_data.get("bb")[2] if base_data.get("bb") else None,
                 })
                 ema25, ema99 = eval_context.get("ema25"), eval_context.get("ema99")
                 eval_context["trend_bias"] = "neutral"

@@ -30,12 +30,12 @@ Follow the **Trend Following Strategy** defined in `STRATEGY.md`:
 ## Trade Journaling
 
 - **Purpose:** To log analysis, entry/exit decisions, and results for future reference.
-- **Naming Format:** Use the format `journal-<symbol>-<date>.md` (e.g., `journal-BNBUSDT-2026-03-09.md`).
+- **Naming Format:** Use the format `journals/journal-<symbol>-<date>.md` (e.g., `journals/journal-BNBUSDT-2026-03-09.md`).
 - **Workflow:** 
-    - Maintain an active journal during the trade session.
+    - Maintain an active journal in the `journals/` directory during the trade session.
     - Log every step: initial analysis, entry plan, execution, protection levels, and final closing audit.
 - **Content:** Each entry must include a timestamp (always use current system time), current price, technical rationale (indicators/trends), and the specific action taken.
-- **Git Safety:** All files matching `journal-*.md` are excluded from version control via `.gitignore`.
+- **Git Safety:** The `journals/` directory is excluded from version control via `.gitignore`.
 
 
 ## Automated Monitoring System

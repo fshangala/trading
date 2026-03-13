@@ -47,9 +47,10 @@ Operate across a hierarchical timeframe model to align macro bias with precision
 ### Step 1: Trend Confirmation & Age Analysis
 - **Bullish Bias:** Price > EMA 25 > EMA 99.
 - **Bearish Bias:** Price < EMA 25 < EMA 99.
-- **Mandatory Filter (Squeeze Check):** The **Bollinger Band Width** must be expanding or at a minimum "healthy" width.
-  - **The Squeeze:** If BB bands are exceptionally tight/flat, **DO NOT ENTER.** This is a consolidation phase where EMAs are prone to whipsaws.
-  - **Wait for Breakout:** Only enter when price breaks out of the BB squeeze with increasing volume (OBV) and widening bands.
+- **Mandatory Filter (Bollinger Squeeze & Breakout Protocol):**
+  - **The Squeeze (Consolidation):** If all EMAs (7, 25, 99) are clustered near the Middle Bollinger Band and the bands are shrinking/tightening, **DO NOT ENTER.** This is a high-risk consolidation phase.
+  - **The Breakout (Confirmation):** A new trend is only confirmed when a candle **closes outside** the Upper or Lower Bollinger Band with expanding bandwidth.
+  - **Action:** Monitor the 15m/3m bands for this breakout before initiating any "Trend Following" or "Value Entry" positions.
 - **Trend Age (Crucial):** Identify the most recent **EMA 25/99 Cross** (Golden/Death Cross).
   - **Early Trend (1-15 Candles):** High probability entry. Breakout/Momentum entries permitted.
   - **Mid Trend (15-30 Candles):** Medium risk. ONLY enter on pullbacks to the **15m EMA 25**.
@@ -88,13 +89,14 @@ To protect capital while maintaining aggressive exposure, position sizing is bas
 4. **Execution:** Run `calculate_qty.py` to get risk-based quantity, then `python place_order.py <symbol> SELL MARKET <qty> SHORT`.
 
 ### Risk Management (Hedge Protection)
-- **Hedge Order (The "Stop Loss"):** Instead of closing the position, place a **STOP_MARKET** entry order in the opposite direction.
+- **Hedge Order (The "Delta-Neutral" Stop):** Instead of closing the position, place a **STOP_MARKET** entry order in the opposite direction using the `protection_order.py` script. This opens a "Hedge" position, locking in the loss and moving the account to a net-zero (delta-neutral) state.
   - **Trigger:** Set at **Entry +/- 0.5 * ATR**. (Tight hedge to limit initial drawdown).
   - **Quantity:** Equal to the initial position size (`1:1 Hedge`).
+  - **Critical Parameter:** You **MUST** set `close_position="false"` and specify the **opposite `position_side`** (e.g., if Primary is LONG, Hedge is SHORT).
   - **Mutual Cancellation (OCO):**
     - If the **Trailing Stop** (Profit) triggers first, **CANCEL** the Hedge Order.
     - If the **Hedge Order** (Loss) triggers first, **CANCEL** the Trailing Stop (to prevent naked exposure).
-  - **Tool:** `python place_order.py <symbol> <OPPOSITE_SIDE> STOP_MARKET <qty> <OPPOSITE_POS_SIDE> <trigger_price>`
+  - **Tool:** `python protection_order.py <symbol> <OPPOSITE_SIDE> <OPPOSITE_POS_SIDE> STOP <trigger_price> CONTRACT_PRICE <qty> false`
 
 - **Hard Take Profit (TP):** Set at **2.0 * ATR** from entry.
 
