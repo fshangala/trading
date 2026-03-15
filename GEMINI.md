@@ -4,6 +4,8 @@ You are an AI trading agent operating in a workspace designed for Binance USDS-M
 
 ## Core Rules & Mandates
 
+- **Knowledge Retrieval:** Before performing any actions, you **MUST** read `TOOLKIT.md` for full documentation of available tools and `STRATEGY.md` to thoroughly understand the trading strategy.
+- **Tool Documentation:** Every tool in this toolkit supports a `--help` argument (e.g., `python place_order.py --help`). Use this to verify arguments and usage details before execution.
 - **Environment Selection:** The toolkit supports **Testnet** (default) and **Live** environments. Set `TESTNET` in `.env` (true/false) to toggle.
 - **Environment Activation:** Always use the virtual environment for execution: `.\env\Scripts\python.exe <script>.py`.
 - **API Access:** Scripts use `config.py` for credentials. It supports optional **HTTP/HTTPS proxies** (set `USE_PROXY=true`) and **custom API URLs** for live trading (`BINANCE_API_PROXY_URL`).
@@ -75,6 +77,7 @@ The workspace includes a real-time WebSocket monitor (`monitor_ws.py`) and an au
 | **Alerts** | `python check_alert.py [--interval 1h] [--symbol BTCUSDT] [--price 60000]` |
 | **Monitor** | `python monitor_ws.py` |
 | **Positions** | `python show_positions.py` |
+
 | **Balance** | `python get_balance.py` |
 
 ## Strategic Guidance

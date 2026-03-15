@@ -56,9 +56,12 @@ All scripts support `-h` or `--help` for detailed usage instructions.
 | `check_order.py` | Detailed status and average fill price of an order. | `python check_order.py <order_id> [symbol]` |
 | `get_balance.py` | Fetches available futures balance (USDT/BNB/etc). | `python get_balance.py [asset]` |
 | `get_crossover.py` | Finds the last EMA 25/99 Golden/Death Cross. | `python get_crossover.py <symbol> <interval> [limit]` |
-| `get_trades.py` | Fetches historical account trade list. | `python get_trades.py [symbol] [limit]` |
-| `get_fees.py` | Calculates commissions and net PnL for a trade. | `python get_fees.py <entry> <exit> <qty> [symbol]` |
-| `monitor.py` | Background market and alert monitoring system. | `python monitor.py [--once]` |
+| `get_trades.py` | Fetches historical account trade list (includes exact commissions). | `python get_trades.py [symbol] [limit]` |
+| `get_fees.py` | Estimates commissions and net PnL for a trade (predictive). | `python get_fees.py <entry> <exit> <qty> [symbol]` |
+
+## Audit vs. Estimation
+- **Post-Trade Audit:** Always use `get_trades.py` to fetch the **exact `commission`** and `realizedPnl` from the exchange ledger. This is the ground truth for your journal.
+- **Pre-Trade Planning:** Use `get_fees.py` to estimate the potential transaction costs based on your current account's Maker/Taker rates.
 
 ## Typical Workflow
 1. **Analyze:** Run `indicators.py` and `get_candles.py` to determine trend and volatility.
@@ -74,12 +77,26 @@ All scripts support `-h` or `--help` for detailed usage instructions.
 The toolkit includes a real-time WebSocket monitoring system (`monitor_ws.py`) and a condition-evaluation engine (`check_alert.py`).
 
 ### Configuration (`alerts.json`)
-The `alerts.json` file contains a list of alert objects:
-- `id`: Unique identifier (used as the notification title).
-- `symbol`: The trading pair (e.g., `BTCUSDT`).
-- `condition`: A Python-evaluable string. 
-    - **Available Variables:** `price`, `pos_amt` (Net absolute exposure), `pos_amt_long`, `pos_amt_short`, `ema7`, `ema25`, `ema99`, `rsi`, `atr`, `vwap`, `obv`, `macd_hist`, `trend_bias`, `bollinger_upper`, `bollinger_middle`, `bollinger_lower`.
-- `description`: Short text describing the alert (used as the notification body).
+The `alerts.json` file contains a list of alert objects. Each object can contain the following fields:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `string` | **Mandatory.** A unique identifier for the alert. Used as the title in system notifications. |
+| `symbol` | `string` | **Mandatory.** The trading pair (e.g., `BTCUSDT`). |
+| `active` | `boolean` | **Mandatory.** Set to `true` to enable the alert, `false` to ignore it. |
+| `condition` | `string` | **Mandatory.** A Python-evaluable expression. Supports boolean operators (`and`, `or`, `not`) and parentheses. (e.g., `price > ema25 and rsi < 70`). |
+| `interval` | `string` | The timeframe for technical indicators (e.g., `1m`, `5m`, `15m`, `1h`, `4h`, `1d`). Set to `null` or omit for real-time price-only alerts. |
+| `description` | `string` | The text message shown in the notification body. |
+| `action` | `string` | The automated task to perform when triggered. Options: `notify` (default), `open_long`, `open_short`. |
+| `action_params` | `object` | Parameters for the action. Common fields: `notify_type` (`notify` or `alarm`). For `open_*` actions: `qty`, `margin_percent`, `leverage`, `sl`, `tp`, `use_atr`, `atr_mult`, `rr_ratio`. |
+| `disables` | `array` | A list of other alert IDs (strings) to automatically deactivate when this alert triggers (used for mutual exclusion). |
+
+#### Available Condition Variables:
+- **Price:** `price` (Current Mark Price).
+- **Position:** `pos_amt` (Net absolute exposure), `pos_amt_long`, `pos_amt_short`.
+- **Indicators:** `ema7`, `ema25`, `ema99`, `rsi`, `atr`, `vwap`, `obv`, `macd_hist`.
+- **Bollinger:** `bollinger_upper`, `bollinger_middle`, `bollinger_lower`.
+- **Trend:** `trend_bias` (`"bullish"`, `"bearish"`, or `"neutral"`).
 
 ### Optimization & Reliability
 - **WebSocket Efficiency:** `monitor_ws.py` uses per-stream `on_message` subscriptions to minimize overhead.

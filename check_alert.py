@@ -7,7 +7,9 @@ It can be run as a standalone CLI tool or integrated into a real-time monitoring
 Key Features:
 - Fetches and caches technical indicators (EMA, RSI, ATR, MACD, etc.) using indicators.py.
 - Monitors position sizes and real-time mark prices using show_positions.py and get_candles.py.
-- Evaluates complex Python-based conditions defined in 'alerts.json' (e.g., 'price > ema25' or 'rsi > 70').
+- Evaluates complex Python-based conditions defined in 'alerts.json'.
+- **Supports Boolean Logic:** Conditions can use 'and', 'or', 'not', and parentheses for complex logic 
+  (e.g., '(price > ema25 or price > ema99) and rsi < 70').
 - Executes automated trading actions (opening positions with TP/SL) using place_order.py and protection_order.py.
 - Sends system notifications (PowerShell balloon tips) or critical alarms (Blocking MessageBox with sound).
 - Handles alert deactivation and linked-alert disabling (mutual exclusion) after successful triggers.

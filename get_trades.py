@@ -33,6 +33,7 @@ def get_trades(symbol="BNBUSDT", limit=10):
                 print(f"Side:         {side}")
                 print(f"Price:        {trade.get('price')}")
                 print(f"Qty:          {trade.get('qty')}")
+                print(f"Commission:   {trade.get('commission')} {trade.get('commissionAsset')}")
                 print(f"Realized PnL: {trade.get('realizedPnl')} USDT")
                 time_val = trade.get('time')
             else:
@@ -42,6 +43,7 @@ def get_trades(symbol="BNBUSDT", limit=10):
                 print(f"Side:         {side}")
                 print(f"Price:        {trade.price}")
                 print(f"Qty:          {trade.qty}")
+                print(f"Commission:   {trade.commission} {trade.commission_asset}")
                 print(f"Realized PnL: {trade.realized_pnl} USDT")
                 time_val = trade.time
             

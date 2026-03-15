@@ -116,7 +116,7 @@ When the Hedge is active (Locked Position) and price tests a major support/resis
 
 
 ## 4. Monitoring & Audit
-- Use `monitor.py` with `alerts.json` to automate TP/SL and breakout notifications.
+- Use `monitor_ws.py` with `alerts.json` to automate TP/SL and breakout notifications.
 - Use `get_fees.py` after every trade to audit net PnL (including maker/taker commissions).
 - **Mandatory Trade Journaling:** 
     - Maintain a journal for every trade in `journals/`.
